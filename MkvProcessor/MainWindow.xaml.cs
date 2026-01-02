@@ -12,6 +12,7 @@ namespace MkvProcessor;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
+    private readonly TvRenamerViewModel _tvRenamerViewModel;
     private bool _forceClose = false;
 
     public MainWindow()
@@ -19,7 +20,10 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _viewModel = new MainViewModel();
+        _tvRenamerViewModel = new TvRenamerViewModel();
+
         DataContext = _viewModel;
+        TvRenamerView.DataContext = _tvRenamerViewModel;
 
         // Subscribe to processing completed for tray notifications
         _viewModel.OnProcessingCompleted += OnProcessingCompleted;
@@ -49,6 +53,7 @@ public partial class MainWindow : Window
         }
 
         await _viewModel.InitializeAsync();
+        await _tvRenamerViewModel.InitializeAsync();
     }
 
     #region Drag and Drop
@@ -94,6 +99,7 @@ public partial class MainWindow : Window
         {
             // Save settings on close
             _viewModel.SaveSettings();
+            _tvRenamerViewModel.SaveSettings();
             TrayIcon.Dispose();
         }
     }

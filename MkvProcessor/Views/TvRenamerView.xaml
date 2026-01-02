@@ -1,0 +1,490 @@
+<UserControl x:Class="MkvProcessor.Views.TvRenamerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:MkvProcessor.Converters"
+             xmlns:vm="clr-namespace:MkvProcessor.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:TvRenamerViewModel}"
+             AllowDrop="True"
+             Drop="OnDrop"
+             DragOver="OnDragOver">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <converters:NamingFormatConverter x:Key="NamingFormatConverter"/>
+
+        <!-- Expander Toggle Button Style -->
+        <Style x:Key="ExpanderToggleButton" TargetType="ToggleButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Padding="5,3">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Arrow" Text="+" FontSize="12" FontWeight="Bold"
+                                           VerticalAlignment="Center" Margin="0,0,5,0" Width="12"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Arrow" Property="Text" Value="-"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Link Button Style for Recent Shows -->
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#0078D4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   TextDecorations="Underline"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#005A9E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Panel Header Style -->
+        <Style x:Key="PanelHeader" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Small Button Style -->
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="MinWidth" Value="50"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+
+        <!-- Alternating Row Style for ListBox -->
+        <Style x:Key="AlternatingRowListBox" TargetType="ListBox">
+            <Setter Property="AlternationCount" Value="2"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+
+        <Style x:Key="AlternatingRowItem" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Style.Triggers>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                    <Setter Property="Background" Value="White"/>
+                </Trigger>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                    <Setter Property="Background" Value="#F5F5F5"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#CCE5FF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Bar: API Settings (Collapsible) + Naming Format -->
+        <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Padding="10" Margin="0,0,0,10">
+            <StackPanel>
+                <!-- Collapsed Header -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ToggleButton Style="{StaticResource ExpanderToggleButton}"
+                                  IsChecked="{Binding IsApiSettingsExpanded}"
+                                  Content="TVDB API Settings" FontWeight="SemiBold"/>
+
+                    <TextBlock Grid.Column="2" Text="Format:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="3" ItemsSource="{Binding NamingFormats}"
+                              SelectedItem="{Binding SelectedNamingFormat}"
+                              Width="180">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource NamingFormatConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+
+                <!-- Expanded API Settings -->
+                <StackPanel Visibility="{Binding IsApiSettingsExpanded, Converter={StaticResource BoolToVis}}"
+                            Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="API Key:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"/>
+
+                        <TextBlock Grid.Column="2" Text="PIN:" VerticalAlignment="Center" Margin="15,0,8,0"/>
+                        <TextBox Grid.Column="3" Text="{Binding Pin, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"/>
+
+                        <Button Grid.Column="5" Content="Save" Padding="15,5" Margin="0,0,5,0"
+                                Command="{Binding SaveApiKeyCommand}"/>
+                        <Button Grid.Column="6" Content="Test" Padding="15,5"
+                                Command="{Binding TestApiConnectionCommand}"/>
+                    </Grid>
+                    <TextBlock Margin="0,8,0,0" FontSize="10" Foreground="Gray">
+                        <Run Text="Metadata provided by "/><Hyperlink NavigateUri="https://thetvdb.com/" RequestNavigate="Hyperlink_RequestNavigate">TheTVDB</Hyperlink><Run Text=". Please consider "/><Hyperlink NavigateUri="https://thetvdb.com/subscribe" RequestNavigate="Hyperlink_RequestNavigate">subscribing</Hyperlink><Run Text="."/>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Three-Panel Area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANEL: Episode Browser -->
+            <Border Grid.Column="0" BorderBrush="#DDDDDD" BorderThickness="1"
+                    CornerRadius="3" Margin="0,0,5,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Episode Browser" Style="{StaticResource PanelHeader}"/>
+
+                    <!-- Search Box -->
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" Padding="5,3">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding SearchShowsCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Button Grid.Column="1" Content="Search" Padding="10,5" Margin="5,0,0,0"
+                                Command="{Binding SearchShowsCommand}"/>
+                    </Grid>
+
+                    <!-- Recent Shows -->
+                    <Border Grid.Row="2" Margin="0,0,0,10"
+                            Visibility="{Binding RecentShows.Count, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Recent:" FontWeight="SemiBold" FontSize="11"
+                                       Foreground="Gray" Margin="0,0,0,3"/>
+                            <ItemsControl ItemsSource="{Binding RecentShows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource LinkButton}"
+                                                Content="{Binding DisplayName}"
+                                                Command="{Binding DataContext.SelectRecentShowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Margin="0,1" FontSize="11"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Search Results / Loading -->
+                    <Grid Grid.Row="3" Margin="0,0,0,10">
+                        <!-- Loading Indicator -->
+                        <StackPanel Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"
+                                    VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Searching..." HorizontalAlignment="Center" FontSize="11"/>
+                            <ProgressBar IsIndeterminate="True" Width="100" Height="12" Margin="0,5,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding IsLoadingShow, Converter={StaticResource BoolToVis}}"
+                                    VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Loading show..." HorizontalAlignment="Center" FontSize="11"/>
+                            <ProgressBar IsIndeterminate="True" Width="100" Height="12" Margin="0,5,0,0"/>
+                        </StackPanel>
+
+                        <!-- Search Results -->
+                        <ListBox ItemsSource="{Binding SearchResults}"
+                                 MaxHeight="120"
+                                 BorderThickness="1"
+                                 Visibility="{Binding SearchResults.Count, Converter={StaticResource BoolToVis}}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="3" Cursor="Hand" Background="Transparent">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick"
+                                                          Command="{Binding DataContext.SelectShowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                          CommandParameter="{Binding}"/>
+                                        </Border.InputBindings>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"/>
+                                            <TextBlock Foreground="Gray" FontSize="10">
+                                                <Run Text="{Binding Year, TargetNullValue=''}"/>
+                                                <Run Text=" "/>
+                                                <Run Text="{Binding Network, TargetNullValue=''}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+
+                    <!-- Selected Show Info + Season/Episode Selection -->
+                    <StackPanel Grid.Row="4" Visibility="{Binding SelectedShow, Converter={StaticResource BoolToVis}}">
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding SelectedShow.Name}"
+                                       FontSize="14" FontWeight="Bold"
+                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                            <Button Grid.Column="1" Content="X" Width="22" Height="22"
+                                    ToolTip="Clear selection" FontSize="10"
+                                    Command="{Binding ClearShowCommand}"/>
+                        </Grid>
+
+                        <TextBlock Foreground="Gray" Margin="0,0,0,8" FontSize="11">
+                            <Run Text="{Binding SelectedShow.Year, TargetNullValue=''}"/>
+                            <Run Text=" - "/>
+                            <Run Text="{Binding SelectedShow.Status, TargetNullValue=''}"/>
+                        </TextBlock>
+
+                        <TextBlock Text="Season:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,3"/>
+                        <ComboBox ItemsSource="{Binding Seasons}"
+                                  SelectedItem="{Binding SelectedSeason}"
+                                  DisplayMemberPath="DisplayName"
+                                  Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Episodes:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,3"
+                                   Visibility="{Binding SelectedSeason, Converter={StaticResource BoolToVis}}"/>
+                        <ListBox x:Name="EpisodeBrowserList"
+                                 ItemsSource="{Binding CurrentSeasonEpisodes}"
+                                 SelectedItem="{Binding SelectedBrowserEpisode}"
+                                 MaxHeight="200"
+                                 BorderThickness="1"
+                                 Visibility="{Binding SelectedSeason, Converter={StaticResource BoolToVis}}"
+                                 MouseDoubleClick="EpisodeBrowserList_MouseDoubleClick">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="11" Padding="2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+
+                    <!-- Browser Action Buttons -->
+                    <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,8,0,0"
+                                Visibility="{Binding SelectedShow, Converter={StaticResource BoolToVis}}">
+                        <Button Content="Add Episode" Style="{StaticResource SmallButton}"
+                                Command="{Binding AddEpisodeCommand}" FontSize="11"/>
+                        <Button Content="Add Season" Style="{StaticResource SmallButton}"
+                                Command="{Binding AddAllSeasonEpisodesCommand}" FontSize="11"/>
+                        <Button Content="Refresh" Style="{StaticResource SmallButton}"
+                                Command="{Binding RefreshShowCommand}" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- MIDDLE PANEL: Episode Queue -->
+            <Border Grid.Column="1" BorderBrush="#DDDDDD" BorderThickness="1"
+                    CornerRadius="3" Margin="5,0,5,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Selected Episodes" Style="{StaticResource PanelHeader}" Margin="0"/>
+                        <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center">
+                            <Run Text="{Binding EpisodeQueue.Count, Mode=OneWay}"/>
+                            <Run Text=" items"/>
+                        </TextBlock>
+                    </Grid>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding EpisodeQueue}"
+                             SelectedItem="{Binding SelectedQueueEpisode}"
+                             Style="{StaticResource AlternatingRowListBox}"
+                             ItemContainerStyle="{StaticResource AlternatingRowItem}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SeasonNumber, StringFormat={}{0}x}"
+                                               FontSize="11" Foreground="Gray" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center">
+                                        <Run Text="{Binding EpisodeNumber, StringFormat={}{0:D2}}"/>
+                                        <Run Text=" - "/>
+                                        <Run Text="{Binding Name}"/>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Up" Style="{StaticResource SmallButton}" Width="40"
+                                Command="{Binding MoveEpisodeUpCommand}" FontSize="11"/>
+                        <Button Content="Down" Style="{StaticResource SmallButton}" Width="50"
+                                Command="{Binding MoveEpisodeDownCommand}" FontSize="11"/>
+                        <Button Content="Remove" Style="{StaticResource SmallButton}"
+                                Command="{Binding RemoveEpisodeCommand}" FontSize="11"/>
+                        <Button Content="Sort" Style="{StaticResource SmallButton}"
+                                Command="{Binding SortEpisodesCommand}" FontSize="11"/>
+                        <Button Content="Clear" Style="{StaticResource SmallButton}"
+                                Command="{Binding ClearEpisodesCommand}" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT PANEL: File Queue -->
+            <Border Grid.Column="2" BorderBrush="#DDDDDD" BorderThickness="1"
+                    CornerRadius="3" Margin="5,0,0,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header with Add buttons -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Selected Files" Style="{StaticResource PanelHeader}" Margin="0"/>
+                        <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0">
+                            <Run Text="{Binding FileQueue.Count, Mode=OneWay}"/>
+                            <Run Text=" items"/>
+                        </TextBlock>
+                        <Button Grid.Column="2" Content="Add Files" Padding="8,3" FontSize="10"
+                                Command="{Binding AddFilesCommand}" Margin="0,0,4,0"/>
+                        <Button Grid.Column="3" Content="Add Folder" Padding="8,3" FontSize="10"
+                                Command="{Binding AddFolderCommand}"/>
+                    </Grid>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FileQueue}"
+                             SelectedItem="{Binding SelectedQueueFile}"
+                             Style="{StaticResource AlternatingRowListBox}"
+                             ItemContainerStyle="{StaticResource AlternatingRowItem}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding FileName}" FontSize="11"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding FilePath}"
+                                               VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DetectedInfo}" FontSize="10"
+                                                   Foreground="Gray" Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Status}" FontSize="10"
+                                                   Foreground="#0078D4" Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Up" Style="{StaticResource SmallButton}" Width="40"
+                                Command="{Binding MoveFileUpCommand}" FontSize="11"/>
+                        <Button Content="Down" Style="{StaticResource SmallButton}" Width="50"
+                                Command="{Binding MoveFileDownCommand}" FontSize="11"/>
+                        <Button Content="Remove" Style="{StaticResource SmallButton}"
+                                Command="{Binding RemoveFileCommand}" FontSize="11"/>
+                        <Button Content="Sort" Style="{StaticResource SmallButton}"
+                                Command="{Binding SortFilesCommand}" FontSize="11"/>
+                        <Button Content="Clear" Style="{StaticResource SmallButton}"
+                                Command="{Binding ClearFilesCommand}" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Bottom Bar: Actions + Status -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="Auto Match" Padding="15,8" Margin="0,0,5,0"
+                        Command="{Binding AutoMatchCommand}"
+                        ToolTip="Automatically match files to episodes by detected season/episode numbers"/>
+                <Button Content="Clear All" Padding="15,8"
+                        Command="{Binding ClearAllCommand}"/>
+            </StackPanel>
+
+            <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Foreground="Gray"/>
+
+            <Button Grid.Column="2" Content="Rename" Padding="25,10"
+                    FontWeight="Bold" Background="#0078D4" Foreground="White"
+                    Command="{Binding RenameCommand}"
+                    IsEnabled="{Binding IsRenaming, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+        </Grid>
+    </Grid>
+</UserControl>

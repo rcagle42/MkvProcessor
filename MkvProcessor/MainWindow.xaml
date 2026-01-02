@@ -6,15 +6,13 @@
         xmlns:converters="clr-namespace:MkvProcessor.Converters"
         xmlns:models="clr-namespace:MkvProcessor.Models"
         xmlns:vm="clr-namespace:MkvProcessor.ViewModels"
+        xmlns:views="clr-namespace:MkvProcessor.Views"
         xmlns:tb="http://www.hardcodet.net/taskbar"
         mc:Ignorable="d"
         Title="MKV Batch Processor"
-        Height="700" Width="900"
-        MinHeight="500" MinWidth="700"
+        Height="700" Width="950"
+        MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        AllowDrop="True"
-        Drop="OnDrop"
-        DragOver="OnDragOver"
         Closing="OnClosing">
 
     <Window.Resources>
@@ -73,8 +71,12 @@
             </StackPanel>
         </Grid>
 
-        <!-- Main Content -->
-        <Grid Margin="10" IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBool}}">
+        <!-- Main TabControl -->
+        <TabControl Margin="10" IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBool}}">
+
+            <!-- Processing Tab -->
+            <TabItem Header="Processing">
+                <Grid AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -346,6 +348,14 @@
                            VerticalAlignment="Center" HorizontalAlignment="Right"
                            Foreground="Gray"/>
             </Grid>
-        </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- TV Renaming Tab -->
+            <TabItem Header="TV Renaming">
+                <views:TvRenamerView x:Name="TvRenamerView" Margin="0,10,0,0"/>
+            </TabItem>
+
+        </TabControl>
     </Grid>
 </Window>

@@ -52,6 +52,28 @@ public class ProcessingSettings
     /// </summary>
     public string? LastInputFolder { get; set; }
 
+    // === TV Renamer Settings ===
+
+    /// <summary>
+    /// TVDB API key for TV show lookups
+    /// </summary>
+    public string? TvdbApiKey { get; set; }
+
+    /// <summary>
+    /// TVDB subscriber PIN (optional, only needed for user-supported keys)
+    /// </summary>
+    public string? TvdbPin { get; set; }
+
+    /// <summary>
+    /// Preferred episode naming format (default: Standard 01x01)
+    /// </summary>
+    public NamingFormat EpisodeNamingFormat { get; set; } = NamingFormat.Standard;
+
+    /// <summary>
+    /// Last folder used for TV file renaming
+    /// </summary>
+    public string? LastTvRenamerFolder { get; set; }
+
     /// <summary>
     /// Gets the current quality preset based on content type and index
     /// </summary>
