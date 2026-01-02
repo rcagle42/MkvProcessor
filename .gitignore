@@ -50,6 +50,14 @@ Generated\ Files/
 TestResult.xml
 nunit-*.xml
 
+# Claude Code
+.claude/
+
+#FFMPEG - ignore entire ffmpeg folder and executables anywhere
+**/ffmpeg/
+**/ffmpeg.exe
+**/ffprobe.exe
+
 # Build Results of an ATL Project
 [Dd]ebugPS/
 [Rr]eleasePS/
