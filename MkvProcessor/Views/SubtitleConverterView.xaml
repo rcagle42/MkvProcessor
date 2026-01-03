@@ -1,0 +1,301 @@
+<UserControl x:Class="MkvProcessor.Views.SubtitleConverterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:MkvProcessor.Converters"
+             xmlns:vm="clr-namespace:MkvProcessor.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:SubtitleConverterViewModel}"
+             AllowDrop="True"
+             Drop="OnDrop"
+             DragOver="OnDragOver">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Expander Toggle Button Style -->
+        <Style x:Key="ExpanderToggleButton" TargetType="ToggleButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Padding="5,3">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Arrow" Text="+" FontSize="12" FontWeight="Bold"
+                                           VerticalAlignment="Center" Margin="0,0,5,0" Width="12"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Arrow" Property="Text" Value="-"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Status Color Converter -->
+        <Style x:Key="StatusCell" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Complete">
+                    <Setter Property="Foreground" Value="Green"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Error">
+                    <Setter Property="Foreground" Value="Red"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Converting">
+                    <Setter Property="Foreground" Value="DodgerBlue"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Settings Panel (Collapsible) -->
+        <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Padding="10" Margin="0,0,0,10">
+            <StackPanel>
+                <!-- Header with Language Dropdown -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ToggleButton Style="{StaticResource ExpanderToggleButton}"
+                                  IsChecked="{Binding IsSettingsExpanded}"
+                                  Content="PgsToSrt Settings" FontWeight="SemiBold"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,10,0">
+                        <Ellipse Width="10" Height="10" Margin="0,0,5,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="Red"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPgsToSrtAvailable}" Value="True">
+                                            <Setter Property="Fill" Value="Green"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock VerticalAlignment="Center" FontSize="11">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Not Found"/>
+                                    <Setter Property="Foreground" Value="Red"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPgsToSrtAvailable}" Value="True">
+                                            <Setter Property="Text" Value="Ready"/>
+                                            <Setter Property="Foreground" Value="Green"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                        <TextBlock Text="Language:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                                  SelectedItem="{Binding SelectedLanguage}"
+                                  Width="180"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Expanded Settings -->
+                <StackPanel Visibility="{Binding IsSettingsExpanded, Converter={StaticResource BoolToVis}}"
+                            Margin="0,10,0,0">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="PgsToSrt Path:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding PgsToSrtPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" Margin="0,0,5,0"/>
+                        <Button Grid.Column="2" Content="Browse" Padding="10,5"
+                                Command="{Binding BrowsePgsToSrtPathCommand}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Tessdata Path:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding TessdataPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" Margin="0,0,5,0"/>
+                        <Button Grid.Column="2" Content="Browse" Padding="10,5"
+                                Command="{Binding BrowseTessdataPathCommand}"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Save Settings" Padding="10,5"
+                                Command="{Binding SaveSettingsCommandCommand}"/>
+                        <TextBlock Text="Tessdata contains .traineddata files for OCR languages"
+                                   Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- File Queue Header -->
+        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1,1,1,0" CornerRadius="3,3,0,0"
+                Background="#F8F8F8" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="File Queue" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="15,0,0,0">
+                    <Run Text="{Binding Files.Count, Mode=OneWay}"/>
+                    <Run Text=" files"/>
+                </TextBlock>
+
+                <Button Grid.Column="2" Content="Add Files" Padding="10,5" Margin="0,0,5,0"
+                        Command="{Binding AddFilesCommand}"/>
+                <Button Grid.Column="3" Content="Add Folder" Padding="10,5"
+                        Command="{Binding AddFolderCommand}"/>
+            </Grid>
+        </Border>
+
+        <!-- File List -->
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Files}"
+                  SelectedItem="{Binding SelectedFile}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  SelectionMode="Single"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column"
+                  BorderThickness="1"
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="" Width="30"
+                                        Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridTextColumn Header="File Name" Width="*"
+                                    Binding="{Binding FileName}"/>
+                <DataGridTextColumn Header="Size" Width="80"
+                                    Binding="{Binding FileSizeFormatted}"/>
+                <DataGridTemplateColumn Header="Status" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource StatusCell}"
+                                       ToolTip="{Binding ErrorMessage}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Progress" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="100"
+                                         Height="15" Margin="2"
+                                         Visibility="{Binding Status, Converter={StaticResource BoolToVis}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Output" Width="*"
+                                    Binding="{Binding ExpectedOutputFileName}"/>
+            </DataGrid.Columns>
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Status}" Value="Complete">
+                            <Setter Property="Background" Value="#E8F5E9"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="Error">
+                            <Setter Property="Background" Value="#FFEBEE"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="Converting">
+                            <Setter Property="Background" Value="#E3F2FD"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+
+        <!-- Log Output -->
+        <Border Grid.Row="3" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Margin="0,10,0,0" MaxHeight="120">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Log Output" FontWeight="SemiBold" Margin="10,5"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding LogLines}" Margin="10,0,10,5">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"
+                                           TextWrapping="NoWrap"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Bottom Bar -->
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="Select All" Padding="10,5" Margin="0,0,5,0"
+                        Command="{Binding SelectAllCommand}"/>
+                <Button Content="Select None" Padding="10,5" Margin="0,0,5,0"
+                        Command="{Binding SelectNoneCommand}"/>
+                <Button Content="Remove" Padding="10,5" Margin="0,0,5,0"
+                        Command="{Binding RemoveFileCommand}"/>
+                <Button Content="Clear All" Padding="10,5"
+                        Command="{Binding ClearFilesCommand}"/>
+            </StackPanel>
+
+            <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Foreground="Gray"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="Pause" Padding="15,10" Margin="0,0,5,0"
+                        Command="{Binding PauseCommand}"
+                        Visibility="{Binding IsConverting, Converter={StaticResource BoolToVis}}"/>
+                <Button Content="Cancel" Padding="15,10" Margin="0,0,5,0"
+                        Command="{Binding CancelCommand}"
+                        Visibility="{Binding IsConverting, Converter={StaticResource BoolToVis}}"/>
+                <Button Content="Convert" Padding="25,10"
+                        FontWeight="Bold" Background="#0078D4" Foreground="White"
+                        Command="{Binding ConvertCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

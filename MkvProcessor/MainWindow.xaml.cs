@@ -13,6 +13,7 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private readonly TvRenamerViewModel _tvRenamerViewModel;
+    private readonly SubtitleConverterViewModel _subtitleConverterViewModel;
     private bool _forceClose = false;
 
     public MainWindow()
@@ -21,9 +22,11 @@ public partial class MainWindow : Window
 
         _viewModel = new MainViewModel();
         _tvRenamerViewModel = new TvRenamerViewModel();
+        _subtitleConverterViewModel = new SubtitleConverterViewModel();
 
         DataContext = _viewModel;
         TvRenamerView.DataContext = _tvRenamerViewModel;
+        SubtitleConverterView.DataContext = _subtitleConverterViewModel;
 
         // Subscribe to processing completed for tray notifications
         _viewModel.OnProcessingCompleted += OnProcessingCompleted;
@@ -54,6 +57,7 @@ public partial class MainWindow : Window
 
         await _viewModel.InitializeAsync();
         await _tvRenamerViewModel.InitializeAsync();
+        _subtitleConverterViewModel.Initialize();
     }
 
     #region Drag and Drop
@@ -100,6 +104,7 @@ public partial class MainWindow : Window
             // Save settings on close
             _viewModel.SaveSettings();
             _tvRenamerViewModel.SaveSettings();
+            _subtitleConverterViewModel.SaveSettings();
             TrayIcon.Dispose();
         }
     }

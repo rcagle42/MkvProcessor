@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <None Include="ffmpeg\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="pgstosrt\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

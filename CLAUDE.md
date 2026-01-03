@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MKV Batch Processor is a Windows desktop application (WPF/.NET 8.0) for batch converting MKV video files to MP4 format. Key features include hardware acceleration (NVIDIA NVENC, Intel QuickSync, AMD AMF), audio normalization with loudness correction, subtitle extraction, and **TV show file renaming with TVDB integration**.
+MKV Batch Processor is a Windows desktop application (WPF/.NET 8.0) for batch converting MKV video files to MP4 format. Key features include hardware acceleration (NVIDIA NVENC, Intel QuickSync, AMD AMF), audio normalization with loudness correction, subtitle extraction, **TV show file renaming with TVDB integration**, and **SUP to SRT subtitle conversion using OCR**.
 
 ## Build Commands
 
@@ -41,6 +41,7 @@ Models (MkvFile, ProcessingSettings, QualityPreset, etc.)
 **ViewModels/**
 - `MainViewModel.cs` - Central view model for the Processing tab, handling file queue and encoding operations
 - `TvRenamerViewModel.cs` - View model for the TV Renaming tab, managing TVDB integration and file renaming
+- `SubtitleConverterViewModel.cs` - View model for the Subtitle Converter tab, managing PgsToSrt OCR conversion
 
 **Services/**
 - `ProcessingQueue.cs` - Manages file processing queue with pause/resume/cancel logic
@@ -53,6 +54,8 @@ Models (MkvFile, ProcessingSettings, QualityPreset, etc.)
 - `TvdbCacheService.cs` - JSON file caching for TVDB data in `%APPDATA%\MkvProcessor\TvdbCache\`
 - `FileMatchingService.cs` - Regex-based episode detection from filenames (S01E01, 1x01, 101 patterns)
 - `RenamingService.cs` - Safe file rename operations with validation
+- `PgsToSrtLocator.cs` - Discovers PgsToSrt.dll in user path, bundled folder, app directory, or system PATH
+- `PgsToSrtService.cs` - Executes PgsToSrt for OCR-based SUP to SRT conversion
 
 **Models/**
 - `MkvFile.cs` - Represents a file in queue with metadata and processing progress
@@ -62,7 +65,8 @@ Models (MkvFile, ProcessingSettings, QualityPreset, etc.)
 - `Season.cs` - Season container with episode list
 - `Episode.cs` - Episode metadata (season/episode number, name, air date)
 - `FileMatch.cs` - Links a file to a matched episode with confidence level
-- Enums: `FileStatus`, `AudioMode`, `EncoderType`, `ContentType`, `MatchConfidence`, `NamingFormat`
+- `SubtitleFile.cs` - Represents a subtitle file in the conversion queue with status and progress
+- Enums: `FileStatus`, `AudioMode`, `EncoderType`, `ContentType`, `MatchConfidence`, `NamingFormat`, `SubtitleConversionStatus`
 
 ### Processing Pipeline
 
@@ -166,3 +170,36 @@ The `TryExtendedMatch` method in `TvRenamerViewModel` is a stub for future fuzzy
 - **Double-click** episode in browser → adds to Selected Episodes queue
 - **Drag-drop** files/folders onto the view → adds to Selected Files queue
 - **Add Season** → adds all episodes from selected season to queue
+
+## Subtitle Converter Feature
+
+The Subtitle Converter tab converts PGS/SUP bitmap subtitles to SRT text format using PgsToSrt with Tesseract OCR.
+
+### Dependencies
+
+- **PgsToSrt** - .NET-based OCR tool ([GitHub](https://github.com/Tentacule/PgsToSrt))
+- **Tesseract traineddata files** - Language models for OCR (e.g., `eng.traineddata`)
+
+### PgsToSrt Discovery
+
+`PgsToSrtLocator` searches in this order:
+1. User-configured path from settings
+2. Bundled `/pgstosrt/` folder
+3. Application directory
+4. System PATH (looks for `PgsToSrt.dll`)
+
+### Command Execution
+
+```bash
+dotnet PgsToSrt.dll --input "file.sup" --output "file.srt" --tesseractlanguage eng --tesseractdata "path/to/tessdata"
+```
+
+### Supported Languages
+
+Common Tesseract codes: `eng`, `spa`, `fra`, `deu`, `ita`, `por`, `nld`, `pol`, `rus`, `jpn`, `kor`, `chi_sim`, `chi_tra`, `ara`
+
+### Output Behavior
+
+- Output `.srt` file created in same directory as input `.sup` file
+- Filename matches input: `movie.en.sup` → `movie.en.srt`
+- Always overwrites existing output files

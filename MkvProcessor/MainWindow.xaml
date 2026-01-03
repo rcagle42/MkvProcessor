@@ -356,6 +356,11 @@
                 <views:TvRenamerView x:Name="TvRenamerView" Margin="0,10,0,0"/>
             </TabItem>
 
+            <!-- Subtitle Converter Tab -->
+            <TabItem Header="Subtitle Converter">
+                <views:SubtitleConverterView x:Name="SubtitleConverterView" Margin="0,10,0,0"/>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>

@@ -74,6 +74,28 @@ public class ProcessingSettings
     /// </summary>
     public string? LastTvRenamerFolder { get; set; }
 
+    // === Subtitle Converter Settings ===
+
+    /// <summary>
+    /// Path to PgsToSrt.dll (null = auto-detect)
+    /// </summary>
+    public string? PgsToSrtPath { get; set; }
+
+    /// <summary>
+    /// Path to Tesseract traineddata files
+    /// </summary>
+    public string? TessdataPath { get; set; }
+
+    /// <summary>
+    /// Default language for OCR (e.g., "eng", "spa", "fra")
+    /// </summary>
+    public string DefaultSubtitleLanguage { get; set; } = "eng";
+
+    /// <summary>
+    /// Last folder used for subtitle conversion
+    /// </summary>
+    public string? LastSubtitleFolder { get; set; }
+
     /// <summary>
     /// Gets the current quality preset based on content type and index
     /// </summary>

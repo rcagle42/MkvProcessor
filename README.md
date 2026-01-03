@@ -1,6 +1,6 @@
 # MKV Batch Processor
 
-A Windows desktop application for batch converting MKV video files to MP4 format with hardware acceleration support, and renaming TV show files using TVDB metadata.
+A Windows desktop application for batch converting MKV video files to MP4 format with hardware acceleration support, renaming TV show files using TVDB metadata, and converting SUP bitmap subtitles to SRT text format.
 
 ## Features
 
@@ -23,6 +23,13 @@ A Windows desktop application for batch converting MKV video files to MP4 format
 - **Auto-match** files to episodes by detected season/episode numbers
 - **Offline caching** of show data for repeated use
 - **Multiple naming formats**: Standard (01x01) or Scene (S01E01)
+
+### Subtitle Conversion
+- **SUP to SRT conversion** using PgsToSrt with Tesseract OCR
+- **Batch processing** with queue management
+- **21 language support** for OCR accuracy
+- **Pause/Resume/Cancel** during conversion
+- **Drag-drop** file and folder support
 
 ## Screenshots
 
@@ -59,6 +66,14 @@ FFmpeg is included in the release package. Alternatively, ensure FFmpeg and FFpr
 4. Add your video files (drag-drop or browse)
 5. Use **Auto Match** or manually align episodes with files
 6. Click **Rename** to rename files in place
+
+### Subtitle Converter Tab
+
+1. Configure PgsToSrt path in settings (expand settings panel)
+2. Optionally set Tessdata path for language files
+3. Select OCR language from dropdown
+4. Add .sup files (drag-drop, browse, or add folder)
+5. Click **Convert** to start batch conversion
 
 ## Building from Source
 
@@ -98,6 +113,10 @@ This application uses the TVDB API but is not endorsed or certified by TheTVDB.
 ### FFmpeg
 
 This application uses [FFmpeg](https://ffmpeg.org/) for video processing, licensed under the LGPL/GPL.
+
+### PgsToSrt
+
+Subtitle conversion uses [PgsToSrt](https://github.com/Tentacule/PgsToSrt) with [Tesseract OCR](https://github.com/tesseract-ocr/tesseract). PgsToSrt must be downloaded separately.
 
 ## License
 
