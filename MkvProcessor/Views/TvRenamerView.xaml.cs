@@ -44,9 +44,9 @@ public partial class TvRenamerView : UserControl
 
     private void EpisodeBrowserList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is TvRenamerViewModel viewModel && viewModel.AddEpisodeCommand.CanExecute(null))
+        if (DataContext is TvRenamerViewModel viewModel && viewModel.AssignEpisodeCommand.CanExecute(null))
         {
-            viewModel.AddEpisodeCommand.Execute(null);
+            viewModel.AssignEpisodeCommand.Execute(null);
         }
     }
 

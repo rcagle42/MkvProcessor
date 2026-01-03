@@ -168,12 +168,11 @@
             </StackPanel>
         </Border>
 
-        <!-- Main Three-Panel Area -->
+        <!-- Main Two-Panel Area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280" MinWidth="200"/>
-                <ColumnDefinition Width="*" MinWidth="200"/>
-                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT PANEL: Episode Browser -->
@@ -316,79 +315,17 @@
                     <!-- Browser Action Buttons -->
                     <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,8,0,0"
                                 Visibility="{Binding SelectedShow, Converter={StaticResource BoolToVis}}">
-                        <Button Content="Add Episode" Style="{StaticResource SmallButton}"
-                                Command="{Binding AddEpisodeCommand}" FontSize="11"/>
-                        <Button Content="Add Season" Style="{StaticResource SmallButton}"
-                                Command="{Binding AddAllSeasonEpisodesCommand}" FontSize="11"/>
+                        <Button Content="Assign to Selected" Style="{StaticResource SmallButton}"
+                                Command="{Binding AssignEpisodeCommand}" FontSize="11"
+                                ToolTip="Assign selected episode to the selected file row"/>
                         <Button Content="Refresh" Style="{StaticResource SmallButton}"
                                 Command="{Binding RefreshShowCommand}" FontSize="11"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- MIDDLE PANEL: Episode Queue -->
+            <!-- RIGHT PANEL: Rename Preview Grid -->
             <Border Grid.Column="1" BorderBrush="#DDDDDD" BorderThickness="1"
-                    CornerRadius="3" Margin="5,0,5,0" Padding="10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Selected Episodes" Style="{StaticResource PanelHeader}" Margin="0"/>
-                        <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center">
-                            <Run Text="{Binding EpisodeQueue.Count, Mode=OneWay}"/>
-                            <Run Text=" items"/>
-                        </TextBlock>
-                    </Grid>
-
-                    <ListBox Grid.Row="1" ItemsSource="{Binding EpisodeQueue}"
-                             SelectedItem="{Binding SelectedQueueEpisode}"
-                             Style="{StaticResource AlternatingRowListBox}"
-                             ItemContainerStyle="{StaticResource AlternatingRowItem}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="35"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding SeasonNumber, StringFormat={}{0}x}"
-                                               FontSize="11" Foreground="Gray" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" FontSize="11" TextTrimming="CharacterEllipsis"
-                                               VerticalAlignment="Center">
-                                        <Run Text="{Binding EpisodeNumber, StringFormat={}{0:D2}}"/>
-                                        <Run Text=" - "/>
-                                        <Run Text="{Binding Name}"/>
-                                    </TextBlock>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="Up" Style="{StaticResource SmallButton}" Width="40"
-                                Command="{Binding MoveEpisodeUpCommand}" FontSize="11"/>
-                        <Button Content="Down" Style="{StaticResource SmallButton}" Width="50"
-                                Command="{Binding MoveEpisodeDownCommand}" FontSize="11"/>
-                        <Button Content="Remove" Style="{StaticResource SmallButton}"
-                                Command="{Binding RemoveEpisodeCommand}" FontSize="11"/>
-                        <Button Content="Sort" Style="{StaticResource SmallButton}"
-                                Command="{Binding SortEpisodesCommand}" FontSize="11"/>
-                        <Button Content="Clear" Style="{StaticResource SmallButton}"
-                                Command="{Binding ClearEpisodesCommand}" FontSize="11"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- RIGHT PANEL: File Queue -->
-            <Border Grid.Column="2" BorderBrush="#DDDDDD" BorderThickness="1"
                     CornerRadius="3" Margin="5,0,0,0" Padding="10">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -404,12 +341,11 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Selected Files" Style="{StaticResource PanelHeader}" Margin="0"/>
+                        <TextBlock Text="Rename Preview" Style="{StaticResource PanelHeader}" Margin="0"/>
                         <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0">
-                            <Run Text="{Binding FileQueue.Count, Mode=OneWay}"/>
-                            <Run Text=" items"/>
+                            <Run Text="{Binding RenamePreviewItems.Count, Mode=OneWay}"/>
+                            <Run Text=" files"/>
                         </TextBlock>
                         <Button Grid.Column="2" Content="Add Files" Padding="8,3" FontSize="10"
                                 Command="{Binding AddFilesCommand}" Margin="0,0,4,0"/>
@@ -417,45 +353,84 @@
                                 Command="{Binding AddFolderCommand}"/>
                     </Grid>
 
-                    <ListBox Grid.Row="1" ItemsSource="{Binding FileQueue}"
-                             SelectedItem="{Binding SelectedQueueFile}"
-                             Style="{StaticResource AlternatingRowListBox}"
-                             ItemContainerStyle="{StaticResource AlternatingRowItem}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding FileName}" FontSize="11"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding FilePath}"
-                                               VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <TextBlock Text="{Binding DetectedInfo}" FontSize="10"
-                                                   Foreground="Gray" Margin="5,0,0,0"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding Status}" FontSize="10"
-                                                   Foreground="#0078D4" Margin="5,0,0,0"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <!-- DataGrid for rename preview -->
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding RenamePreviewItems}"
+                              SelectedItem="{Binding SelectedPreviewItem}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              AlternatingRowBackground="#F5F5F5"
+                              RowBackground="White"
+                              BorderThickness="1"
+                              FontSize="11">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Status" Width="45" Binding="{Binding StatusIcon}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="ToolTip" Value="{Binding StatusTooltip}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="Matched">
+                                                <Setter Property="Foreground" Value="Green"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Unmatched">
+                                                <Setter Property="Foreground" Value="#888888"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                <Setter Property="Foreground" Value="Red"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Original Filename" Width="*"
+                                                Binding="{Binding OriginalFileName}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="New Filename" Width="*"
+                                                Binding="{Binding NewFileName}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding NewFileName}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasMatch}" Value="False">
+                                                <Setter Property="Foreground" Value="#AAAAAA"/>
+                                                <Setter Property="FontStyle" Value="Italic"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
+                    <!-- Action buttons -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="Up" Style="{StaticResource SmallButton}" Width="40"
-                                Command="{Binding MoveFileUpCommand}" FontSize="11"/>
+                                Command="{Binding MoveItemUpCommand}" FontSize="11"/>
                         <Button Content="Down" Style="{StaticResource SmallButton}" Width="50"
-                                Command="{Binding MoveFileDownCommand}" FontSize="11"/>
+                                Command="{Binding MoveItemDownCommand}" FontSize="11"/>
                         <Button Content="Remove" Style="{StaticResource SmallButton}"
-                                Command="{Binding RemoveFileCommand}" FontSize="11"/>
+                                Command="{Binding RemoveItemCommand}" FontSize="11"/>
+                        <Button Content="Clear Match" Style="{StaticResource SmallButton}"
+                                Command="{Binding ClearAssignmentCommand}" FontSize="11"
+                                ToolTip="Clear the episode assignment for selected row"/>
                         <Button Content="Sort" Style="{StaticResource SmallButton}"
-                                Command="{Binding SortFilesCommand}" FontSize="11"/>
-                        <Button Content="Clear" Style="{StaticResource SmallButton}"
-                                Command="{Binding ClearFilesCommand}" FontSize="11"/>
+                                Command="{Binding SortItemsCommand}" FontSize="11"/>
+                        <Button Content="Clear All" Style="{StaticResource SmallButton}"
+                                Command="{Binding ClearItemsCommand}" FontSize="11"/>
                     </StackPanel>
                 </Grid>
             </Border>

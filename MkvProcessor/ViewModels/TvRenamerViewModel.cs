@@ -55,21 +55,13 @@ public partial class TvRenamerViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<TvShow> _recentShows = [];
 
-    // === Episode Queue (Middle Panel) ===
+    // === Rename Preview Grid ===
 
     [ObservableProperty]
-    private ObservableCollection<Episode> _episodeQueue = [];
+    private ObservableCollection<RenamePreviewItem> _renamePreviewItems = [];
 
     [ObservableProperty]
-    private Episode? _selectedQueueEpisode;
-
-    // === File Queue (Right Panel) ===
-
-    [ObservableProperty]
-    private ObservableCollection<QueuedFile> _fileQueue = [];
-
-    [ObservableProperty]
-    private QueuedFile? _selectedQueueFile;
+    private RenamePreviewItem? _selectedPreviewItem;
 
     // === Naming Options ===
 
@@ -267,117 +259,67 @@ public partial class TvRenamerViewModel : ObservableObject
         SelectedSeason = null;
         SearchResults.Clear();
         SearchQuery = string.Empty;
-        EpisodeQueue.Clear();
+        // Clear episode matches from preview items
+        foreach (var item in RenamePreviewItems)
+        {
+            item.MatchedEpisode = null;
+            item.NewFileName = string.Empty;
+            item.Status = MatchStatus.Unmatched;
+        }
         UpdateRenameCanExecute();
     }
 
     #endregion
 
-    #region Episode Queue Commands
+    #region Episode Assignment Commands
 
-    [RelayCommand(CanExecute = nameof(CanAddEpisode))]
-    private void AddEpisode()
+    /// <summary>
+    /// Assigns the selected browser episode to the selected preview item
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanAssignEpisode))]
+    private void AssignEpisode()
     {
-        if (SelectedBrowserEpisode == null)
+        if (SelectedBrowserEpisode == null || SelectedPreviewItem == null || SelectedShow == null)
             return;
 
-        // Don't add duplicates
-        if (!EpisodeQueue.Contains(SelectedBrowserEpisode))
-        {
-            EpisodeQueue.Add(SelectedBrowserEpisode);
-            UpdateRenameCanExecute();
-            StatusText = $"Added episode {SelectedBrowserEpisode.SeasonNumber}x{SelectedBrowserEpisode.EpisodeNumber:D2}";
-        }
-    }
-
-    private bool CanAddEpisode() => SelectedBrowserEpisode != null;
-
-    [RelayCommand]
-    private void AddAllSeasonEpisodes()
-    {
-        if (SelectedSeason == null)
-            return;
-
-        var added = 0;
-        foreach (var episode in SelectedSeason.Episodes.OrderBy(e => e.EpisodeNumber))
-        {
-            if (!EpisodeQueue.Contains(episode))
-            {
-                EpisodeQueue.Add(episode);
-                added++;
-            }
-        }
+        SelectedPreviewItem.MatchedEpisode = SelectedBrowserEpisode;
+        SelectedPreviewItem.NewFileName = _fileMatchingService.GenerateFileName(
+            SelectedBrowserEpisode,
+            SelectedShow.Name,
+            SelectedNamingFormat,
+            SelectedPreviewItem.Extension);
+        SelectedPreviewItem.Status = MatchStatus.Matched;
 
         UpdateRenameCanExecute();
-        StatusText = $"Added {added} episodes from Season {SelectedSeason.Number}";
+        StatusText = $"Assigned {SelectedBrowserEpisode.SeasonNumber}x{SelectedBrowserEpisode.EpisodeNumber:D2} to selected file";
     }
 
-    [RelayCommand(CanExecute = nameof(CanRemoveEpisode))]
-    private void RemoveEpisode()
+    private bool CanAssignEpisode() =>
+        SelectedBrowserEpisode != null && SelectedPreviewItem != null && SelectedShow != null;
+
+    /// <summary>
+    /// Clears the episode assignment from the selected preview item
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanClearAssignment))]
+    private void ClearAssignment()
     {
-        if (SelectedQueueEpisode == null)
+        if (SelectedPreviewItem == null)
             return;
 
-        EpisodeQueue.Remove(SelectedQueueEpisode);
+        SelectedPreviewItem.MatchedEpisode = null;
+        SelectedPreviewItem.NewFileName = string.Empty;
+        SelectedPreviewItem.Status = MatchStatus.Unmatched;
+
         UpdateRenameCanExecute();
+        StatusText = "Assignment cleared";
     }
 
-    private bool CanRemoveEpisode() => SelectedQueueEpisode != null;
-
-    [RelayCommand]
-    private void SortEpisodes()
-    {
-        var sorted = EpisodeQueue.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).ToList();
-        EpisodeQueue.Clear();
-        foreach (var ep in sorted)
-            EpisodeQueue.Add(ep);
-
-        StatusText = "Episodes sorted";
-    }
-
-    [RelayCommand]
-    private void ClearEpisodes()
-    {
-        EpisodeQueue.Clear();
-        UpdateRenameCanExecute();
-        StatusText = "Episode queue cleared";
-    }
-
-    [RelayCommand(CanExecute = nameof(CanMoveEpisodeUp))]
-    private void MoveEpisodeUp()
-    {
-        if (SelectedQueueEpisode == null)
-            return;
-
-        var index = EpisodeQueue.IndexOf(SelectedQueueEpisode);
-        if (index > 0)
-        {
-            EpisodeQueue.Move(index, index - 1);
-        }
-    }
-
-    private bool CanMoveEpisodeUp() =>
-        SelectedQueueEpisode != null && EpisodeQueue.IndexOf(SelectedQueueEpisode) > 0;
-
-    [RelayCommand(CanExecute = nameof(CanMoveEpisodeDown))]
-    private void MoveEpisodeDown()
-    {
-        if (SelectedQueueEpisode == null)
-            return;
-
-        var index = EpisodeQueue.IndexOf(SelectedQueueEpisode);
-        if (index < EpisodeQueue.Count - 1)
-        {
-            EpisodeQueue.Move(index, index + 1);
-        }
-    }
-
-    private bool CanMoveEpisodeDown() =>
-        SelectedQueueEpisode != null && EpisodeQueue.IndexOf(SelectedQueueEpisode) < EpisodeQueue.Count - 1;
+    private bool CanClearAssignment() =>
+        SelectedPreviewItem != null && SelectedPreviewItem.HasMatch;
 
     #endregion
 
-    #region File Queue Commands
+    #region Preview Grid Commands
 
     [RelayCommand]
     private void AddFiles()
@@ -391,7 +333,7 @@ public partial class TvRenamerViewModel : ObservableObject
 
         if (dialog.ShowDialog() == true)
         {
-            AddFilesToQueue(dialog.FileNames);
+            AddFilesToPreview(dialog.FileNames);
         }
     }
 
@@ -406,77 +348,77 @@ public partial class TvRenamerViewModel : ObservableObject
         if (dialog.ShowDialog() == true)
         {
             var files = FileMatchingService.GetVideoFilesFromDirectory(dialog.FolderName);
-            AddFilesToQueue(files);
+            AddFilesToPreview(files);
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanRemoveFile))]
-    private void RemoveFile()
+    [RelayCommand(CanExecute = nameof(CanRemoveItem))]
+    private void RemoveItem()
     {
-        if (SelectedQueueFile == null)
+        if (SelectedPreviewItem == null)
             return;
 
-        FileQueue.Remove(SelectedQueueFile);
+        RenamePreviewItems.Remove(SelectedPreviewItem);
         UpdateRenameCanExecute();
     }
 
-    private bool CanRemoveFile() => SelectedQueueFile != null;
+    private bool CanRemoveItem() => SelectedPreviewItem != null;
 
     [RelayCommand]
-    private void SortFiles()
+    private void SortItems()
     {
-        var sorted = FileQueue
-            .OrderBy(f => f.DetectedSeasonNumber)
-            .ThenBy(f => f.DetectedEpisodeNumber)
-            .ThenBy(f => f.FileName)
+        var sorted = RenamePreviewItems
+            .OrderBy(i => i.DetectedSeasonNumber)
+            .ThenBy(i => i.DetectedEpisodeNumber)
+            .ThenBy(i => i.OriginalFileName)
             .ToList();
 
-        FileQueue.Clear();
-        foreach (var file in sorted)
-            FileQueue.Add(file);
+        RenamePreviewItems.Clear();
+        foreach (var item in sorted)
+            RenamePreviewItems.Add(item);
 
-        StatusText = "Files sorted by detected episode number";
+        StatusText = "Items sorted by detected episode number";
     }
 
     [RelayCommand]
-    private void ClearFiles()
+    private void ClearItems()
     {
-        FileQueue.Clear();
+        RenamePreviewItems.Clear();
         UpdateRenameCanExecute();
-        StatusText = "File queue cleared";
+        StatusText = "All items cleared";
     }
 
-    [RelayCommand(CanExecute = nameof(CanMoveFileUp))]
-    private void MoveFileUp()
+    [RelayCommand(CanExecute = nameof(CanMoveItemUp))]
+    private void MoveItemUp()
     {
-        if (SelectedQueueFile == null)
+        if (SelectedPreviewItem == null)
             return;
 
-        var index = FileQueue.IndexOf(SelectedQueueFile);
+        var index = RenamePreviewItems.IndexOf(SelectedPreviewItem);
         if (index > 0)
         {
-            FileQueue.Move(index, index - 1);
+            RenamePreviewItems.Move(index, index - 1);
         }
     }
 
-    private bool CanMoveFileUp() =>
-        SelectedQueueFile != null && FileQueue.IndexOf(SelectedQueueFile) > 0;
+    private bool CanMoveItemUp() =>
+        SelectedPreviewItem != null && RenamePreviewItems.IndexOf(SelectedPreviewItem) > 0;
 
-    [RelayCommand(CanExecute = nameof(CanMoveFileDown))]
-    private void MoveFileDown()
+    [RelayCommand(CanExecute = nameof(CanMoveItemDown))]
+    private void MoveItemDown()
     {
-        if (SelectedQueueFile == null)
+        if (SelectedPreviewItem == null)
             return;
 
-        var index = FileQueue.IndexOf(SelectedQueueFile);
-        if (index < FileQueue.Count - 1)
+        var index = RenamePreviewItems.IndexOf(SelectedPreviewItem);
+        if (index < RenamePreviewItems.Count - 1)
         {
-            FileQueue.Move(index, index + 1);
+            RenamePreviewItems.Move(index, index + 1);
         }
     }
 
-    private bool CanMoveFileDown() =>
-        SelectedQueueFile != null && FileQueue.IndexOf(SelectedQueueFile) < FileQueue.Count - 1;
+    private bool CanMoveItemDown() =>
+        SelectedPreviewItem != null && RenamePreviewItems.IndexOf(SelectedPreviewItem) < RenamePreviewItems.Count - 1;
 
     #endregion
 
@@ -485,102 +427,90 @@ public partial class TvRenamerViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanAutoMatch))]
     private async Task AutoMatchAsync()
     {
-        if (SelectedShow == null || FileQueue.Count == 0)
+        if (SelectedShow == null || RenamePreviewItems.Count == 0)
             return;
 
         StatusText = "Auto-matching files...";
 
-        // Clear existing episode queue
-        EpisodeQueue.Clear();
-
         var allEpisodes = SelectedShow.Seasons.SelectMany(s => s.Episodes).ToList();
-        var filesToMatch = FileQueue.ToList();
-        var matchedCount = 0;
+        var itemsToMatch = RenamePreviewItems.ToList();
+        var showName = SelectedShow.Name;
+        var format = SelectedNamingFormat;
 
         // Run matching on background thread to avoid UI freeze
         var results = await Task.Run(() =>
         {
-            var matchResults = new List<(QueuedFile File, Episode? Episode)>();
+            var matchResults = new List<(RenamePreviewItem Item, Episode? Episode)>();
 
-            foreach (var file in filesToMatch)
+            foreach (var item in itemsToMatch)
             {
                 Episode? matchingEpisode = null;
 
                 // First try to match by detected episode number
-                if (file.DetectedSeasonNumber > 0 && file.DetectedEpisodeNumber > 0)
+                if (item.DetectedSeasonNumber > 0 && item.DetectedEpisodeNumber > 0)
                 {
                     matchingEpisode = allEpisodes.FirstOrDefault(e =>
-                        e.SeasonNumber == file.DetectedSeasonNumber &&
-                        e.EpisodeNumber == file.DetectedEpisodeNumber);
+                        e.SeasonNumber == item.DetectedSeasonNumber &&
+                        e.EpisodeNumber == item.DetectedEpisodeNumber);
                 }
 
                 // If no number match, try name-based matching
                 if (matchingEpisode == null)
                 {
-                    var (episode, confidence) = _fileMatchingService.MatchByName(file.FileName, allEpisodes);
+                    var (episode, confidence) = _fileMatchingService.MatchByName(item.OriginalFileName, allEpisodes);
                     if (episode != null && confidence != MatchConfidence.None)
                     {
                         matchingEpisode = episode;
                     }
                 }
 
-                matchResults.Add((file, matchingEpisode));
+                matchResults.Add((item, matchingEpisode));
             }
 
             return matchResults;
         });
 
         // Apply results on UI thread
-        foreach (var (file, episode) in results)
+        var matchedCount = 0;
+        foreach (var (item, episode) in results)
         {
             if (episode != null)
             {
-                EpisodeQueue.Add(episode);
+                item.MatchedEpisode = episode;
+                item.NewFileName = _fileMatchingService.GenerateFileName(episode, showName, format, item.Extension);
+                item.Status = MatchStatus.Matched;
                 matchedCount++;
+            }
+            else
+            {
+                item.MatchedEpisode = null;
+                item.NewFileName = string.Empty;
+                item.Status = MatchStatus.Unmatched;
             }
         }
 
         UpdateRenameCanExecute();
-        StatusText = $"Auto-matched {matchedCount}/{FileQueue.Count} files";
+        StatusText = $"Auto-matched {matchedCount}/{RenamePreviewItems.Count} files";
     }
 
     private bool CanAutoMatch() =>
-        SelectedShow != null && FileQueue.Count > 0;
-
-    /// <summary>
-    /// Extended matching logic using name-based matching (exact, word overlap, fuzzy).
-    /// </summary>
-    private Episode? TryExtendedMatch(QueuedFile file, List<Episode> allEpisodes)
-    {
-        var (episode, confidence) = _fileMatchingService.MatchByName(file.FileName, allEpisodes);
-
-        if (episode != null && confidence != MatchConfidence.None)
-        {
-            return episode;
-        }
-
-        return null;
-    }
+        SelectedShow != null && RenamePreviewItems.Count > 0;
 
     [RelayCommand]
     private void ClearAll()
     {
-        EpisodeQueue.Clear();
-        FileQueue.Clear();
+        RenamePreviewItems.Clear();
         UpdateRenameCanExecute();
-        StatusText = "All queues cleared";
+        StatusText = "All items cleared";
     }
 
     [RelayCommand(CanExecute = nameof(CanRename))]
     private async Task Rename()
     {
-        if (SelectedShow == null)
-            return;
-
-        var pairCount = Math.Min(EpisodeQueue.Count, FileQueue.Count);
-        if (pairCount == 0)
+        var itemsToRename = RenamePreviewItems.Where(i => i.HasMatch && i.Status != MatchStatus.Error).ToList();
+        if (itemsToRename.Count == 0)
         {
-            StatusText = "No pairs to rename";
+            StatusText = "No matched items to rename";
             return;
         }
 
@@ -589,29 +519,41 @@ public partial class TvRenamerViewModel : ObservableObject
         try
         {
             var renamed = 0;
+            var skipped = 0;
             var failed = 0;
 
             await Task.Run(() =>
             {
-                for (int i = 0; i < pairCount; i++)
+                foreach (var item in itemsToRename)
                 {
-                    var episode = EpisodeQueue[i];
-                    var file = FileQueue[i];
+                    var newPath = Path.Combine(Path.GetDirectoryName(item.FilePath) ?? "", item.NewFileName);
 
-                    var newFileName = _fileMatchingService.GenerateFileName(
-                        episode,
-                        SelectedShow.Name,
-                        SelectedNamingFormat,
-                        Path.GetExtension(file.FilePath));
-
-                    var newPath = Path.Combine(Path.GetDirectoryName(file.FilePath) ?? "", newFileName);
+                    // Skip if already renamed (same name)
+                    if (string.Equals(item.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        skipped++;
+                        continue;
+                    }
 
                     // Check if target exists
-                    if (File.Exists(newPath) && !string.Equals(file.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
+                    if (File.Exists(newPath))
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            file.Status = "Target exists";
+                            item.Status = MatchStatus.Error;
+                            item.ErrorMessage = "Target file already exists";
+                        });
+                        failed++;
+                        continue;
+                    }
+
+                    // Check if source exists
+                    if (!File.Exists(item.FilePath))
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            item.Status = MatchStatus.Error;
+                            item.ErrorMessage = "Source file not found";
                         });
                         failed++;
                         continue;
@@ -619,12 +561,11 @@ public partial class TvRenamerViewModel : ObservableObject
 
                     try
                     {
-                        File.Move(file.FilePath, newPath);
+                        File.Move(item.FilePath, newPath);
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            file.Status = "Renamed";
-                            file.FilePath = newPath;
-                            file.FileName = newFileName;
+                            item.FilePath = newPath;
+                            item.OriginalFileName = item.NewFileName;
                         });
                         renamed++;
                     }
@@ -632,14 +573,18 @@ public partial class TvRenamerViewModel : ObservableObject
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            file.Status = $"Error: {ex.Message}";
+                            item.Status = MatchStatus.Error;
+                            item.ErrorMessage = ex.Message;
                         });
                         failed++;
                     }
                 }
             });
 
-            StatusText = $"Renamed {renamed} files" + (failed > 0 ? $", {failed} failed" : "");
+            var status = $"Renamed {renamed} files";
+            if (skipped > 0) status += $", {skipped} already named correctly";
+            if (failed > 0) status += $", {failed} failed";
+            StatusText = status;
         }
         finally
         {
@@ -648,10 +593,7 @@ public partial class TvRenamerViewModel : ObservableObject
     }
 
     private bool CanRename() =>
-        SelectedShow != null &&
-        EpisodeQueue.Count > 0 &&
-        FileQueue.Count > 0 &&
-        !IsRenaming;
+        RenamePreviewItems.Any(i => i.HasMatch) && !IsRenaming;
 
     #endregion
 
@@ -734,7 +676,7 @@ public partial class TvRenamerViewModel : ObservableObject
 
         if (files.Count > 0)
         {
-            AddFilesToQueue(files);
+            AddFilesToPreview(files);
         }
     }
 
@@ -742,28 +684,30 @@ public partial class TvRenamerViewModel : ObservableObject
 
     #region Property Change Handlers
 
+    partial void OnSelectedShowChanged(TvShow? value)
+    {
+        // Update command states when show selection changes
+        AutoMatchCommand.NotifyCanExecuteChanged();
+        AssignEpisodeCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedSeasonChanged(Season? value)
     {
         OnPropertyChanged(nameof(CurrentSeasonEpisodes));
     }
 
-    partial void OnSelectedQueueEpisodeChanged(Episode? value)
+    partial void OnSelectedPreviewItemChanged(RenamePreviewItem? value)
     {
-        MoveEpisodeUpCommand.NotifyCanExecuteChanged();
-        MoveEpisodeDownCommand.NotifyCanExecuteChanged();
-        RemoveEpisodeCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnSelectedQueueFileChanged(QueuedFile? value)
-    {
-        MoveFileUpCommand.NotifyCanExecuteChanged();
-        MoveFileDownCommand.NotifyCanExecuteChanged();
-        RemoveFileCommand.NotifyCanExecuteChanged();
+        MoveItemUpCommand.NotifyCanExecuteChanged();
+        MoveItemDownCommand.NotifyCanExecuteChanged();
+        RemoveItemCommand.NotifyCanExecuteChanged();
+        AssignEpisodeCommand.NotifyCanExecuteChanged();
+        ClearAssignmentCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedBrowserEpisodeChanged(Episode? value)
     {
-        AddEpisodeCommand.NotifyCanExecuteChanged();
+        AssignEpisodeCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -792,24 +736,25 @@ public partial class TvRenamerViewModel : ObservableObject
         });
     }
 
-    private void AddFilesToQueue(IEnumerable<string> filePaths)
+    private void AddFilesToPreview(IEnumerable<string> filePaths)
     {
         var added = 0;
         foreach (var filePath in filePaths)
         {
             // Don't add duplicates
-            if (FileQueue.Any(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+            if (RenamePreviewItems.Any(i => i.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
             var fileName = Path.GetFileName(filePath);
             var (season, episode, _) = _fileMatchingService.DetectEpisode(fileName);
 
-            FileQueue.Add(new QueuedFile
+            RenamePreviewItems.Add(new RenamePreviewItem
             {
                 FilePath = filePath,
-                FileName = fileName,
+                OriginalFileName = fileName,
                 DetectedSeasonNumber = season,
-                DetectedEpisodeNumber = episode
+                DetectedEpisodeNumber = episode,
+                Status = MatchStatus.Unmatched
             });
             added++;
         }
@@ -828,15 +773,27 @@ public partial class TvRenamerViewModel : ObservableObject
 }
 
 /// <summary>
-/// Represents a file in the file queue
+/// Represents a row in the rename preview grid
 /// </summary>
-public partial class QueuedFile : ObservableObject
+public partial class RenamePreviewItem : ObservableObject
 {
     [ObservableProperty]
     private string _filePath = string.Empty;
 
     [ObservableProperty]
-    private string _fileName = string.Empty;
+    private string _originalFileName = string.Empty;
+
+    [ObservableProperty]
+    private string _newFileName = string.Empty;
+
+    [ObservableProperty]
+    private Episode? _matchedEpisode;
+
+    [ObservableProperty]
+    private MatchStatus _status = MatchStatus.Unmatched;
+
+    [ObservableProperty]
+    private string _errorMessage = string.Empty;
 
     [ObservableProperty]
     private int _detectedSeasonNumber;
@@ -844,13 +801,45 @@ public partial class QueuedFile : ObservableObject
     [ObservableProperty]
     private int _detectedEpisodeNumber;
 
-    [ObservableProperty]
-    private string _status = string.Empty;
+    /// <summary>
+    /// Whether this item has a valid match
+    /// </summary>
+    public bool HasMatch => MatchedEpisode != null && !string.IsNullOrEmpty(NewFileName);
 
     /// <summary>
-    /// Display string showing detected episode info
+    /// Status icon for display
     /// </summary>
-    public string DetectedInfo => DetectedSeasonNumber > 0 && DetectedEpisodeNumber > 0
-        ? $"({DetectedSeasonNumber}x{DetectedEpisodeNumber:D2})"
-        : "";
+    public string StatusIcon => Status switch
+    {
+        MatchStatus.Matched => "✓",
+        MatchStatus.Unmatched => "—",
+        MatchStatus.Error => "✗",
+        _ => ""
+    };
+
+    /// <summary>
+    /// Tooltip text for the status column
+    /// </summary>
+    public string StatusTooltip => Status switch
+    {
+        MatchStatus.Matched => "Ready to rename",
+        MatchStatus.Unmatched => "No episode matched",
+        MatchStatus.Error => !string.IsNullOrEmpty(ErrorMessage) ? ErrorMessage : "Error",
+        _ => ""
+    };
+
+    /// <summary>
+    /// File extension
+    /// </summary>
+    public string Extension => Path.GetExtension(FilePath);
+}
+
+/// <summary>
+/// Status of a rename preview item
+/// </summary>
+public enum MatchStatus
+{
+    Unmatched,
+    Matched,
+    Error
 }
