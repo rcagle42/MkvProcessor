@@ -242,6 +242,38 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task AddFiles()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Select MKV files",
+            Filter = "MKV Files (*.mkv)|*.mkv|All Files (*.*)|*.*",
+            Multiselect = true,
+            InitialDirectory = Directory.Exists(InputFolder) ? InputFolder : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)
+        };
+
+        if (dialog.ShowDialog() == true && dialog.FileNames.Length > 0)
+        {
+            await AddDroppedItemsAsync(dialog.FileNames);
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddFolder()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select folder containing MKV files",
+            InitialDirectory = Directory.Exists(InputFolder) ? InputFolder : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            await AddDroppedItemsAsync([dialog.FolderName]);
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanStartProcessing))]
     private async Task StartProcessing()
     {

@@ -78,34 +78,14 @@
                 <Grid AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Drop Zone / Folder Selection -->
-            <Border Grid.Row="0" BorderBrush="#CCCCCC" BorderThickness="2" CornerRadius="5"
-                    Background="#F5F5F5" Padding="15" Margin="0,0,0,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel>
-                        <TextBlock Text="Drop MKV files or folders here" FontSize="14" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding InputFolder}" Foreground="Gray" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="1" Content="Browse..." Padding="15,8"
-                            Command="{Binding BrowseInputFolderCommand}"/>
-                </Grid>
-            </Border>
-
             <!-- Settings Panel (Collapsible) -->
-            <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
+            <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3" Margin="0,0,0,10">
                 <StackPanel>
                     <ToggleButton Style="{StaticResource ExpanderToggleButton}"
                                   IsChecked="{Binding IsSettingsExpanded}"
@@ -171,39 +151,52 @@
             </Border>
 
             <!-- File List -->
-            <Grid Grid.Row="2">
+            <Grid Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <!-- File List Header -->
-                <Grid Margin="0,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <Border BorderBrush="#DDDDDD" BorderThickness="1,1,1,0" CornerRadius="3,3,0,0"
+                        Background="#F8F8F8" Padding="10" Margin="0,0,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock>
-                        <Run Text="Files ("/>
-                        <Run Text="{Binding SelectedFilesInfo, Mode=OneWay}"/>
-                        <Run Text=")"/>
-                    </TextBlock>
+                        <TextBlock Text="Files" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0">
+                            <Run Text="("/>
+                            <Run Text="{Binding SelectedFilesInfo, Mode=OneWay}"/>
+                            <Run Text=")"/>
+                        </TextBlock>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button Content="▲" Width="25" Margin="0,0,3,0" ToolTip="Move Up"
+                        <Button Grid.Column="2" Content="Add Files" Padding="10,5" Margin="0,0,5,0"
+                                Command="{Binding AddFilesCommand}"/>
+                        <Button Grid.Column="3" Content="Add Folder" Padding="10,5" Margin="0,0,15,0"
+                                Command="{Binding AddFolderCommand}"/>
+
+                        <Button Grid.Column="4" Content="▲" Width="25" Margin="0,0,3,0" ToolTip="Move Up"
                                 Command="{Binding MoveFileUpCommand}"
                                 CommandParameter="{Binding SelectedItem, ElementName=FileGrid}"/>
-                        <Button Content="▼" Width="25" Margin="0,0,3,0" ToolTip="Move Down"
+                        <Button Grid.Column="5" Content="▼" Width="25" Margin="0,0,3,0" ToolTip="Move Down"
                                 Command="{Binding MoveFileDownCommand}"
                                 CommandParameter="{Binding SelectedItem, ElementName=FileGrid}"/>
-                        <Button Content="Remove" Margin="0,0,3,0" Padding="8,2"
+                        <Button Grid.Column="6" Content="Remove" Margin="0,0,3,0" Padding="8,5"
                                 Command="{Binding RemoveSelectedFileCommand}"
                                 CommandParameter="{Binding SelectedItem, ElementName=FileGrid}"/>
-                        <Button Content="Clear Done" Padding="8,2"
+                        <Button Grid.Column="7" Content="Clear Done" Padding="8,5"
                                 Command="{Binding ClearCompletedCommand}"/>
-                    </StackPanel>
-                </Grid>
+                    </Grid>
+                </Border>
 
                 <!-- File DataGrid -->
                 <DataGrid x:Name="FileGrid" Grid.Row="1"
@@ -240,7 +233,7 @@
             </Grid>
 
             <!-- Progress Section -->
-            <Border Grid.Row="3" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+            <Border Grid.Row="2" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
                     Padding="10" Margin="0,10,0,10"
                     Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
@@ -272,7 +265,7 @@
             </Border>
 
             <!-- Log Panel (Collapsible) -->
-            <Border Grid.Row="4" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+            <Border Grid.Row="3" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
                     Margin="0,0,0,10" MaxHeight="150">
                 <StackPanel>
                     <ToggleButton Style="{StaticResource ExpanderToggleButton}"
@@ -294,7 +287,7 @@
             </Border>
 
             <!-- Control Buttons -->
-            <Grid Grid.Row="5">
+            <Grid Grid.Row="4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
