@@ -8,11 +8,6 @@ namespace MkvProcessor.Models;
 public class ProcessingSettings
 {
     /// <summary>
-    /// Content type (TV show or Movie)
-    /// </summary>
-    public ContentType ContentType { get; set; } = ContentType.Movie;
-
-    /// <summary>
     /// Quality preset index (0-based)
     /// </summary>
     public int QualityPresetIndex { get; set; } = 1;
@@ -97,14 +92,11 @@ public class ProcessingSettings
     public string? LastSubtitleFolder { get; set; }
 
     /// <summary>
-    /// Gets the current quality preset based on content type and index
+    /// Gets the current quality preset based on index
     /// </summary>
     public QualityPreset GetCurrentQualityPreset()
     {
-        var presets = ContentType == ContentType.Movie
-            ? QualityPreset.MoviePresets
-            : QualityPreset.TvShowPresets;
-
+        var presets = QualityPreset.Presets;
         var index = Math.Clamp(QualityPresetIndex, 0, presets.Length - 1);
         return presets[index];
     }

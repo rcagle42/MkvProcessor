@@ -31,23 +31,13 @@ public class QualityPreset
     public string Description { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets quality presets for TV shows
+    /// Gets available quality presets
     /// </summary>
-    public static QualityPreset[] TvShowPresets =>
+    public static QualityPreset[] Presets =>
     [
-        new() { Name = "Fast", Crf = 23, Preset = "medium", AudioBitrate = "256k", Description = "CRF 23, Medium preset" },
-        new() { Name = "Balanced", Crf = 21, Preset = "medium", AudioBitrate = "256k", Description = "CRF 21, Medium preset" },
-        new() { Name = "High Quality", Crf = 19, Preset = "slow", AudioBitrate = "256k", Description = "CRF 19, Slow preset" }
-    ];
-
-    /// <summary>
-    /// Gets quality presets for movies
-    /// </summary>
-    public static QualityPreset[] MoviePresets =>
-    [
-        new() { Name = "Good", Crf = 22, Preset = "medium", AudioBitrate = "320k", Description = "CRF 22, Medium preset" },
-        new() { Name = "High", Crf = 20, Preset = "medium", AudioBitrate = "320k", Description = "CRF 20, Medium preset" },
-        new() { Name = "Excellent", Crf = 18, Preset = "slow", AudioBitrate = "320k", Description = "CRF 18, Slow preset" },
-        new() { Name = "Reference", Crf = 16, Preset = "slower", AudioBitrate = "320k", Description = "CRF 16, Slower preset" }
+        new() { Name = "Good", Crf = 22, Preset = "medium", AudioBitrate = "320k", Description = "CRF 22, Medium preset (faster)" },
+        new() { Name = "High", Crf = 20, Preset = "medium", AudioBitrate = "320k", Description = "CRF 20, Medium preset (balanced)" },
+        new() { Name = "Excellent", Crf = 18, Preset = "slow", AudioBitrate = "320k", Description = "CRF 18, Slow preset (best quality)" },
+        new() { Name = "Reference", Crf = 16, Preset = "slower", AudioBitrate = "320k", Description = "CRF 16, Slower preset (near-lossless)" }
     ];
 }

@@ -19,7 +19,6 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:StatusToColorConverter x:Key="StatusToColor"/>
         <converters:StatusToStringConverter x:Key="StatusToString"/>
-        <converters:ContentTypeConverter x:Key="ContentTypeConverter"/>
         <converters:AudioModeConverter x:Key="AudioModeConverter"/>
         <converters:QualityPresetConverter x:Key="QualityPresetConverter"/>
         <converters:InverseBoolConverter x:Key="InverseBool"/>
@@ -123,24 +122,11 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Content Type -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Content:" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                        <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,20,10"
-                                  ItemsSource="{Binding ContentTypes}"
-                                  SelectedItem="{Binding Settings.ContentType}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Converter={StaticResource ContentTypeConverter}}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
                         <!-- Quality -->
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Quality:" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                        <ComboBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,10"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Quality:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                        <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,20,10"
                                   ItemsSource="{Binding QualityPresets}"
                                   SelectedItem="{Binding SelectedQualityPreset}">
                             <ComboBox.ItemTemplate>
@@ -149,6 +135,13 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+
+                        <!-- Encoder -->
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Encoder:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                        <ComboBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,10"
+                                  ItemsSource="{Binding AvailableEncoders}"
+                                  SelectedItem="{Binding SelectedEncoder}"
+                                  DisplayMemberPath="DisplayName"/>
 
                         <!-- Audio Mode -->
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Audio:" VerticalAlignment="Center" Margin="0,0,10,10"/>
@@ -162,16 +155,9 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
 
-                        <!-- Encoder -->
-                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Encoder:" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                        <ComboBox Grid.Row="1" Grid.Column="3" Margin="0,0,0,10"
-                                  ItemsSource="{Binding AvailableEncoders}"
-                                  SelectedItem="{Binding SelectedEncoder}"
-                                  DisplayMemberPath="DisplayName"/>
-
                         <!-- Output Folder -->
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Output:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3">
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Output:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                        <Grid Grid.Row="1" Grid.Column="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>

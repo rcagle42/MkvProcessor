@@ -92,31 +92,6 @@ public class StatusToStringConverter : IValueConverter
 }
 
 /// <summary>
-/// Converts ContentType enum to display string
-/// </summary>
-public class ContentTypeConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is ContentType contentType)
-        {
-            return contentType switch
-            {
-                ContentType.TvShow => "TV Shows",
-                ContentType.Movie => "Movies",
-                _ => value.ToString() ?? ""
-            };
-        }
-        return value?.ToString() ?? "";
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
-}
-
-/// <summary>
 /// Converts AudioMode enum to display string
 /// </summary>
 public class AudioModeConverter : IValueConverter

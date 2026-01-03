@@ -88,11 +88,6 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<MkvFile> Files => _processingQueue.Files;
 
     /// <summary>
-    /// Content type options for the dropdown
-    /// </summary>
-    public ContentType[] ContentTypes => [ContentType.TvShow, ContentType.Movie];
-
-    /// <summary>
     /// Audio mode options for the dropdown
     /// </summary>
     public AudioMode[] AudioModes => [AudioMode.Dual, AudioMode.Original, AudioMode.Normalized];
@@ -423,10 +418,7 @@ public partial class MainViewModel : ObservableObject
         if (SelectedEncoder != null)
             Settings.Encoder = SelectedEncoder.Type;
 
-        var presets = Settings.ContentType == ContentType.Movie
-            ? QualityPreset.MoviePresets
-            : QualityPreset.TvShowPresets;
-        Settings.QualityPresetIndex = Array.IndexOf(presets, SelectedQualityPreset);
+        Settings.QualityPresetIndex = Array.IndexOf(QualityPreset.Presets, SelectedQualityPreset);
 
         _settingsService.Save(Settings);
     }
@@ -451,10 +443,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (value != null)
         {
-            var presets = Settings.ContentType == ContentType.Movie
-                ? QualityPreset.MoviePresets
-                : QualityPreset.TvShowPresets;
-            Settings.QualityPresetIndex = Array.IndexOf(presets, value);
+            Settings.QualityPresetIndex = Array.IndexOf(QualityPreset.Presets, value);
         }
     }
 
@@ -464,9 +453,7 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateQualityPresets()
     {
-        var presets = Settings.ContentType == ContentType.Movie
-            ? QualityPreset.MoviePresets
-            : QualityPreset.TvShowPresets;
+        var presets = QualityPreset.Presets;
 
         QualityPresets = new ObservableCollection<QualityPreset>(presets);
 
