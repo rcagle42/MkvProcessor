@@ -483,52 +483,59 @@ public partial class TvRenamerViewModel : ObservableObject
     #region Auto-Match and Rename Commands
 
     [RelayCommand(CanExecute = nameof(CanAutoMatch))]
-    private void AutoMatch()
+    private async Task AutoMatchAsync()
     {
         if (SelectedShow == null || FileQueue.Count == 0)
             return;
+
+        StatusText = "Auto-matching files...";
 
         // Clear existing episode queue
         EpisodeQueue.Clear();
 
         var allEpisodes = SelectedShow.Seasons.SelectMany(s => s.Episodes).ToList();
+        var filesToMatch = FileQueue.ToList();
         var matchedCount = 0;
-        var unmatchedFiles = new List<QueuedFile>();
 
-        // Try to match each file by detected episode number
-        foreach (var file in FileQueue)
+        // Run matching on background thread to avoid UI freeze
+        var results = await Task.Run(() =>
         {
-            if (file.DetectedSeasonNumber > 0 && file.DetectedEpisodeNumber > 0)
-            {
-                var matchingEpisode = allEpisodes.FirstOrDefault(e =>
-                    e.SeasonNumber == file.DetectedSeasonNumber &&
-                    e.EpisodeNumber == file.DetectedEpisodeNumber);
+            var matchResults = new List<(QueuedFile File, Episode? Episode)>();
 
-                if (matchingEpisode != null)
+            foreach (var file in filesToMatch)
+            {
+                Episode? matchingEpisode = null;
+
+                // First try to match by detected episode number
+                if (file.DetectedSeasonNumber > 0 && file.DetectedEpisodeNumber > 0)
                 {
-                    EpisodeQueue.Add(matchingEpisode);
-                    matchedCount++;
-                    continue;
+                    matchingEpisode = allEpisodes.FirstOrDefault(e =>
+                        e.SeasonNumber == file.DetectedSeasonNumber &&
+                        e.EpisodeNumber == file.DetectedEpisodeNumber);
                 }
+
+                // If no number match, try name-based matching
+                if (matchingEpisode == null)
+                {
+                    var (episode, confidence) = _fileMatchingService.MatchByName(file.FileName, allEpisodes);
+                    if (episode != null && confidence != MatchConfidence.None)
+                    {
+                        matchingEpisode = episode;
+                    }
+                }
+
+                matchResults.Add((file, matchingEpisode));
             }
 
-            // No match found - add placeholder (null would break things, so we track separately)
-            unmatchedFiles.Add(file);
-        }
+            return matchResults;
+        });
 
-        // If we have unmatched files, try extended matching (can be expanded later)
-        foreach (var file in unmatchedFiles)
+        // Apply results on UI thread
+        foreach (var (file, episode) in results)
         {
-            var matchingEpisode = TryExtendedMatch(file, allEpisodes);
-            if (matchingEpisode != null)
+            if (episode != null)
             {
-                // Find the file's position and insert episode at same position
-                var fileIndex = FileQueue.IndexOf(file);
-                while (EpisodeQueue.Count < fileIndex)
-                {
-                    // Pad with first available unmatched episode or leave gap
-                }
-                EpisodeQueue.Add(matchingEpisode);
+                EpisodeQueue.Add(episode);
                 matchedCount++;
             }
         }
@@ -541,12 +548,17 @@ public partial class TvRenamerViewModel : ObservableObject
         SelectedShow != null && FileQueue.Count > 0;
 
     /// <summary>
-    /// Extended matching logic - can be expanded for fuzzy name matching, etc.
+    /// Extended matching logic using name-based matching (exact, word overlap, fuzzy).
     /// </summary>
     private Episode? TryExtendedMatch(QueuedFile file, List<Episode> allEpisodes)
     {
-        // TODO: Add fuzzy name matching here in the future
-        // For now, just return null for unmatched files
+        var (episode, confidence) = _fileMatchingService.MatchByName(file.FileName, allEpisodes);
+
+        if (episode != null && confidence != MatchConfidence.None)
+        {
+            return episode;
+        }
+
         return null;
     }
 

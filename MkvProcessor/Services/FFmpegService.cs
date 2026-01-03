@@ -128,6 +128,7 @@ public partial class FFmpegService
 
     /// <summary>
     /// Extracts subtitles from the MKV file (non-fatal - continues on error)
+    /// Uses Plex-compatible naming: Movie.en.srt, Movie.es.sup, etc.
     /// </summary>
     private async Task ExtractSubtitlesAsync(string inputPath, string outputFolder, CancellationToken cancellationToken)
     {
@@ -146,6 +147,9 @@ public partial class FFmpegService
 
             LogOutput?.Invoke($"  Found {subtitleStreams.Count} subtitle stream(s)");
 
+            // Track language usage to handle duplicates (e.g., Movie.en.srt, Movie.en.2.srt)
+            var languageCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             // Separate text-based and bitmap-based subtitles
             var textSubtitles = subtitleStreams.Where(s => IsTextSubtitle(s.CodecName)).ToList();
             var bitmapSubtitles = subtitleStreams.Where(s => IsBitmapSubtitle(s.CodecName)).ToList();
@@ -154,7 +158,8 @@ public partial class FFmpegService
             foreach (var sub in textSubtitles)
             {
                 var streamIndex = subtitleStreams.IndexOf(sub);
-                var srtPath = Path.Combine(outputFolder, $"{fileName}.{streamIndex}.srt");
+                var langSuffix = GetLanguageSuffix(sub.Language, languageCount);
+                var srtPath = Path.Combine(outputFolder, $"{fileName}.{langSuffix}.srt");
 
                 try
                 {
@@ -163,12 +168,12 @@ public partial class FFmpegService
 
                     if (File.Exists(srtPath) && new FileInfo(srtPath).Length > 0)
                     {
-                        LogOutput?.Invoke($"  Extracted text subtitle #{streamIndex} ({sub.CodecName}) as SRT");
+                        LogOutput?.Invoke($"  Extracted text subtitle ({sub.Language}, {sub.CodecName}) as SRT");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogOutput?.Invoke($"  Warning: Could not extract text subtitle #{streamIndex}: {ex.Message}");
+                    LogOutput?.Invoke($"  Warning: Could not extract text subtitle ({sub.Language}): {ex.Message}");
                 }
             }
 
@@ -177,7 +182,8 @@ public partial class FFmpegService
             {
                 var streamIndex = subtitleStreams.IndexOf(sub);
                 var extension = sub.IsPgs ? "sup" : "sub";
-                var subPath = Path.Combine(outputFolder, $"{fileName}.{streamIndex}.{extension}");
+                var langSuffix = GetLanguageSuffix(sub.Language, languageCount);
+                var subPath = Path.Combine(outputFolder, $"{fileName}.{langSuffix}.{extension}");
 
                 try
                 {
@@ -186,12 +192,12 @@ public partial class FFmpegService
 
                     if (File.Exists(subPath) && new FileInfo(subPath).Length > 0)
                     {
-                        LogOutput?.Invoke($"  Extracted bitmap subtitle #{streamIndex} ({sub.CodecName}) as {extension.ToUpper()}");
+                        LogOutput?.Invoke($"  Extracted bitmap subtitle ({sub.Language}, {sub.CodecName}) as {extension.ToUpper()}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogOutput?.Invoke($"  Warning: Could not extract bitmap subtitle #{streamIndex}: {ex.Message}");
+                    LogOutput?.Invoke($"  Warning: Could not extract bitmap subtitle ({sub.Language}): {ex.Message}");
                 }
             }
         }
@@ -200,6 +206,24 @@ public partial class FFmpegService
             // Subtitle extraction is non-fatal - just log and continue
             LogOutput?.Invoke($"  Warning: Subtitle extraction failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Gets the language suffix for subtitle filename, handling duplicates.
+    /// First occurrence: "en", second: "en.2", third: "en.3", etc.
+    /// </summary>
+    private static string GetLanguageSuffix(string language, Dictionary<string, int> languageCount)
+    {
+        var lang = string.IsNullOrWhiteSpace(language) ? "und" : language.ToLowerInvariant();
+
+        if (!languageCount.TryGetValue(lang, out var count))
+        {
+            languageCount[lang] = 1;
+            return lang;
+        }
+
+        languageCount[lang] = count + 1;
+        return $"{lang}.{count + 1}";
     }
 
     /// <summary>

@@ -155,7 +155,7 @@ public class MediaInfoService
             var startInfo = new ProcessStartInfo
             {
                 FileName = FFmpegLocator.FFprobePath,
-                Arguments = $"-hide_banner -loglevel error -select_streams s -show_entries stream=index,codec_name -of csv=p=0 \"{filePath}\"",
+                Arguments = $"-hide_banner -loglevel error -select_streams s -show_entries stream=index,codec_name:stream_tags=language -of csv=p=0 \"{filePath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -177,10 +177,16 @@ public class MediaInfoService
                     var parts = line.Trim().Split(',');
                     if (parts.Length >= 2 && int.TryParse(parts[0], out var index))
                     {
+                        // Language is optional - may not be present in all streams
+                        var language = parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2])
+                            ? parts[2].Trim()
+                            : "und";
+
                         streams.Add(new SubtitleStreamInfo
                         {
                             Index = index,
                             CodecName = parts[1],
+                            Language = language,
                             IsPgs = parts[1].Contains("pgs", StringComparison.OrdinalIgnoreCase) ||
                                    parts[1].Contains("hdmv", StringComparison.OrdinalIgnoreCase)
                         });
@@ -204,5 +210,6 @@ public class SubtitleStreamInfo
 {
     public int Index { get; init; }
     public string CodecName { get; init; } = string.Empty;
+    public string Language { get; init; } = "und";
     public bool IsPgs { get; init; }
 }
