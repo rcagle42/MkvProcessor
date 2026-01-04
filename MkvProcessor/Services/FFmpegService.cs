@@ -39,8 +39,14 @@ public partial class FFmpegService
         CancellationToken cancellationToken)
     {
         var startTime = DateTime.Now;
-        var inputFolder = Path.GetDirectoryName(file.FilePath) ?? "";
-        var outputFolder = settings.GetOutputFolder(inputFolder);
+        var outputFolder = file.OutputFolder;
+        if (string.IsNullOrEmpty(outputFolder))
+        {
+            // Fallback: create subfolder named after the parent folder
+            var inputFolder = Path.GetDirectoryName(file.FilePath) ?? "";
+            var parentFolderName = Path.GetFileName(inputFolder);
+            outputFolder = Path.Combine(inputFolder, parentFolderName);
+        }
         var outputPath = Path.Combine(outputFolder, Path.ChangeExtension(file.FileName, ".mp4"));
         var tempAudioPath = Path.Combine(outputFolder, $"temp_{Guid.NewGuid():N}.m4a");
 

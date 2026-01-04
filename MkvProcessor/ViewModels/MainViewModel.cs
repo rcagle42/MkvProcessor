@@ -39,9 +39,6 @@ public partial class MainViewModel : ObservableObject
     private string _inputFolder = string.Empty;
 
     [ObservableProperty]
-    private string _outputFolder = string.Empty;
-
-    [ObservableProperty]
     private bool _isProcessing;
 
     [ObservableProperty]
@@ -177,7 +174,6 @@ public partial class MainViewModel : ObservableObject
         // Load settings
         Settings = _settingsService.Load();
         InputFolder = Settings.LastInputFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-        UpdateOutputFolder();
 
         // Load quality presets
         UpdateQualityPresets();
@@ -220,25 +216,7 @@ public partial class MainViewModel : ObservableObject
         {
             InputFolder = dialog.FolderName;
             Settings.LastInputFolder = InputFolder;
-            UpdateOutputFolder();
             await LoadFilesFromFolderAsync(InputFolder);
-        }
-    }
-
-    [RelayCommand]
-    private void BrowseOutputFolder()
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select output folder",
-            InitialDirectory = Directory.Exists(OutputFolder) ? OutputFolder : InputFolder
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            OutputFolder = dialog.FolderName;
-            Settings.OutputFolder = OutputFolder;
-            Settings.UseCustomOutputFolder = true;
         }
     }
 
@@ -271,6 +249,25 @@ public partial class MainViewModel : ObservableObject
         if (dialog.ShowDialog() == true)
         {
             await AddDroppedItemsAsync([dialog.FolderName]);
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseFileOutputFolder(MkvFile? file)
+    {
+        if (file == null) return;
+
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select output folder for this file",
+            InitialDirectory = Directory.Exists(file.OutputFolder)
+                ? file.OutputFolder
+                : Path.GetDirectoryName(file.FilePath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            file.OutputFolder = dialog.FolderName;
         }
     }
 
@@ -388,7 +385,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     InputFolder = path;
                     Settings.LastInputFolder = path;
-                    UpdateOutputFolder();
                 }
             }
             else if (File.Exists(path) && path.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
@@ -399,7 +395,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     InputFolder = folder;
                     Settings.LastInputFolder = folder;
-                    UpdateOutputFolder();
                 }
             }
         }
@@ -462,7 +457,6 @@ public partial class MainViewModel : ObservableObject
     partial void OnSettingsChanged(ProcessingSettings value)
     {
         UpdateQualityPresets();
-        UpdateOutputFolder();
     }
 
     partial void OnSelectedEncoderChanged(EncoderInfo? value)
@@ -491,18 +485,6 @@ public partial class MainViewModel : ObservableObject
 
         var index = Math.Clamp(Settings.QualityPresetIndex, 0, presets.Length - 1);
         SelectedQualityPreset = presets[index];
-    }
-
-    private void UpdateOutputFolder()
-    {
-        if (Settings.UseCustomOutputFolder && !string.IsNullOrEmpty(Settings.OutputFolder))
-        {
-            OutputFolder = Settings.OutputFolder;
-        }
-        else if (!string.IsNullOrEmpty(InputFolder))
-        {
-            OutputFolder = Path.Combine(InputFolder, "processed");
-        }
     }
 
     private void UpdateOverallProgress()

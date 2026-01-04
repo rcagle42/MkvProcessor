@@ -16,11 +16,14 @@ public class MediaInfoService
     public async Task<MkvFile> GetFileInfoAsync(string filePath)
     {
         var fileInfo = new FileInfo(filePath);
+        var sourceDirectory = fileInfo.DirectoryName ?? string.Empty;
+        var parentFolderName = Path.GetFileName(sourceDirectory);
         var mkvFile = new MkvFile
         {
             FilePath = filePath,
             FileName = fileInfo.Name,
-            FileSize = fileInfo.Length
+            FileSize = fileInfo.Length,
+            OutputFolder = Path.Combine(sourceDirectory, parentFolderName)
         };
 
         try

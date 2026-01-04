@@ -80,6 +80,12 @@ public partial class MkvFile : ObservableObject
     private string _outputPath = string.Empty;
 
     /// <summary>
+    /// Output folder for this file (default: {SourceDirectory}\Processed)
+    /// </summary>
+    [ObservableProperty]
+    private string _outputFolder = string.Empty;
+
+    /// <summary>
     /// Whether this file needs audio transcoding (TrueHD, DTS, etc.)
     /// </summary>
     public bool NeedsAudioTranscode => AudioCodec.ToLowerInvariant() switch

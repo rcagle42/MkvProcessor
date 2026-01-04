@@ -23,16 +23,6 @@ public class ProcessingSettings
     public EncoderType Encoder { get; set; } = EncoderType.Cpu;
 
     /// <summary>
-    /// Custom output folder (null = use "processed" subfolder)
-    /// </summary>
-    public string? OutputFolder { get; set; }
-
-    /// <summary>
-    /// Whether to use a custom output folder
-    /// </summary>
-    public bool UseCustomOutputFolder { get; set; } = false;
-
-    /// <summary>
     /// Minimize to system tray when closing
     /// </summary>
     public bool MinimizeToTray { get; set; } = true;
@@ -99,17 +89,5 @@ public class ProcessingSettings
         var presets = QualityPreset.Presets;
         var index = Math.Clamp(QualityPresetIndex, 0, presets.Length - 1);
         return presets[index];
-    }
-
-    /// <summary>
-    /// Gets the output folder for a given input folder
-    /// </summary>
-    public string GetOutputFolder(string inputFolder)
-    {
-        if (UseCustomOutputFolder && !string.IsNullOrEmpty(OutputFolder))
-        {
-            return OutputFolder;
-        }
-        return Path.Combine(inputFolder, "processed");
     }
 }
