@@ -59,7 +59,14 @@ This workflow taught me a lot about effectively directing AI tools while maintai
 
 ## Screenshots
 
-*Coming soon*
+### Video Processing
+![Processing Tab](screenshots/Processing.png)
+
+### TV Show Renaming
+![TV Renaming Tab](screenshots/TVRenaming.png)
+
+### Subtitle Conversion
+![Subtitle Converter Tab](screenshots/SubtitleConverter.png)
 
 ## Requirements
 
