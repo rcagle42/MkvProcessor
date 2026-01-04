@@ -7,7 +7,6 @@
         xmlns:models="clr-namespace:MkvProcessor.Models"
         xmlns:vm="clr-namespace:MkvProcessor.ViewModels"
         xmlns:views="clr-namespace:MkvProcessor.Views"
-        xmlns:tb="http://www.hardcodet.net/taskbar"
         mc:Ignorable="d"
         Title="MKV Batch Processor"
         Height="700" Width="950"
@@ -47,20 +46,6 @@
     </Window.Resources>
 
     <Grid>
-        <!-- System Tray Icon -->
-        <tb:TaskbarIcon x:Name="TrayIcon"
-                        ToolTipText="MKV Batch Processor"
-                        TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick">
-            <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Show" Click="ShowWindow_Click"/>
-                    <MenuItem Header="Pause/Resume" Click="PauseResume_Click"/>
-                    <Separator/>
-                    <MenuItem Header="Exit" Click="Exit_Click"/>
-                </ContextMenu>
-            </tb:TaskbarIcon.ContextMenu>
-        </tb:TaskbarIcon>
-
         <!-- Loading Overlay -->
         <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"
               Background="#80000000" Panel.ZIndex="100">

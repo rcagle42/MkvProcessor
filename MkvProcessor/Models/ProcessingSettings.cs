@@ -1,5 +1,3 @@
-using System.IO;
-
 namespace MkvProcessor.Models;
 
 /// <summary>
@@ -21,16 +19,6 @@ public class ProcessingSettings
     /// Selected encoder type
     /// </summary>
     public EncoderType Encoder { get; set; } = EncoderType.Cpu;
-
-    /// <summary>
-    /// Minimize to system tray when closing
-    /// </summary>
-    public bool MinimizeToTray { get; set; } = true;
-
-    /// <summary>
-    /// Show notification when processing completes
-    /// </summary>
-    public bool ShowCompletionNotification { get; set; } = true;
 
     /// <summary>
     /// Last used input folder

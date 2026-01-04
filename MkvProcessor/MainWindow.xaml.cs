@@ -14,7 +14,6 @@ public partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly TvRenamerViewModel _tvRenamerViewModel;
     private readonly SubtitleConverterViewModel _subtitleConverterViewModel;
-    private bool _forceClose = false;
 
     public MainWindow()
     {
@@ -27,9 +26,6 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
         TvRenamerView.DataContext = _tvRenamerViewModel;
         SubtitleConverterView.DataContext = _subtitleConverterViewModel;
-
-        // Subscribe to processing completed for tray notifications
-        _viewModel.OnProcessingCompleted += OnProcessingCompleted;
 
         // Auto-scroll log to bottom when new content is added
         _viewModel.LogLines.CollectionChanged += (_, _) =>
@@ -86,51 +82,9 @@ public partial class MainWindow : Window
 
     #endregion
 
-    #region Window Closing / System Tray
+    #region Window Closing
 
     private void OnClosing(object sender, CancelEventArgs e)
-    {
-        if (_viewModel.Settings.MinimizeToTray && !_forceClose)
-        {
-            e.Cancel = true;
-            Hide();
-            TrayIcon.ShowBalloonTip(
-                "MKV Batch Processor",
-                "Application minimized to tray. Double-click to restore.",
-                Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info);
-        }
-        else
-        {
-            // Save settings on close
-            _viewModel.SaveSettings();
-            _tvRenamerViewModel.SaveSettings();
-            _subtitleConverterViewModel.SaveSettings();
-            TrayIcon.Dispose();
-        }
-    }
-
-    private void TrayIcon_TrayMouseDoubleClick(object sender, RoutedEventArgs e)
-    {
-        ShowAndActivate();
-    }
-
-    private void ShowWindow_Click(object sender, RoutedEventArgs e)
-    {
-        ShowAndActivate();
-    }
-
-    private void PauseResume_Click(object sender, RoutedEventArgs e)
-    {
-        if (_viewModel.IsProcessing)
-        {
-            if (_viewModel.IsPaused)
-                _viewModel.ResumeProcessingCommand.Execute(null);
-            else
-                _viewModel.PauseProcessingCommand.Execute(null);
-        }
-    }
-
-    private void Exit_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.IsProcessing)
         {
@@ -141,29 +95,18 @@ public partial class MainWindow : Window
                 MessageBoxImage.Warning);
 
             if (result != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
                 return;
+            }
 
             _viewModel.CancelProcessingCommand.Execute(null);
         }
 
-        _forceClose = true;
-        Close();
-    }
-
-    private void ShowAndActivate()
-    {
-        Show();
-        WindowState = WindowState.Normal;
-        Activate();
-    }
-
-    private void OnProcessingCompleted(ProcessingSummary summary)
-    {
-        if (_viewModel.Settings.ShowCompletionNotification)
-        {
-            var message = $"Completed: {summary.SuccessfulFiles} successful, {summary.FailedFiles} failed, {summary.SkippedFiles} skipped";
-            TrayIcon.ShowBalloonTip("Processing Complete", message, Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info);
-        }
+        // Save settings on close
+        _viewModel.SaveSettings();
+        _tvRenamerViewModel.SaveSettings();
+        _subtitleConverterViewModel.SaveSettings();
     }
 
     #endregion
