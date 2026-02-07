@@ -53,6 +53,9 @@ nunit-*.xml
 # Claude Code
 .claude/
 
+# User secrets / local config overrides
+appsettings.user.json
+
 #FFMPEG - ignore entire ffmpeg folder and executables anywhere
 **/ffmpeg/
 **/ffmpeg.exe

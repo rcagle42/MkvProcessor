@@ -15,28 +15,6 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:NamingFormatConverter x:Key="NamingFormatConverter"/>
 
-        <!-- Expander Toggle Button Style -->
-        <Style x:Key="ExpanderToggleButton" TargetType="ToggleButton">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Border Background="Transparent" Padding="5,3">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="Arrow" Text="+" FontSize="12" FontWeight="Bold"
-                                           VerticalAlignment="Center" Margin="0,0,5,0" Width="12"/>
-                                <ContentPresenter VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Arrow" Property="Text" Value="-"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- Link Button Style for Recent Shows -->
         <Style x:Key="LinkButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -109,21 +87,36 @@
         <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
                 Padding="10" Margin="0,0,0,10">
             <StackPanel>
-                <!-- Collapsed Header -->
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <ToggleButton Style="{StaticResource ExpanderToggleButton}"
-                                  IsChecked="{Binding IsApiSettingsExpanded}"
-                                  Content="TVDB API Settings" FontWeight="SemiBold"/>
+                    <!-- API Status Indicator -->
+                    <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="TVDB API key not configured"/>
+                                <Setter Property="Foreground" Value="#CC7700"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsApiConfigured}" Value="True">
+                                        <Setter Property="Text" Value="TVDB API key configured"/>
+                                        <Setter Property="Foreground" Value="Green"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
 
-                    <TextBlock Grid.Column="2" Text="Format:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox Grid.Column="3" ItemsSource="{Binding NamingFormats}"
+                    <Button Grid.Column="2" Content="Test Connection" Padding="10,5" Margin="0,0,8,0"
+                            Command="{Binding TestApiConnectionCommand}"/>
+
+                    <TextBlock Grid.Column="3" Text="Format:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Grid.Column="4" ItemsSource="{Binding NamingFormats}"
                               SelectedItem="{Binding SelectedNamingFormat}"
                               Width="180">
                         <ComboBox.ItemTemplate>
@@ -134,37 +127,9 @@
                     </ComboBox>
                 </Grid>
 
-                <!-- Expanded API Settings -->
-                <StackPanel Visibility="{Binding IsApiSettingsExpanded, Converter={StaticResource BoolToVis}}"
-                            Margin="0,10,0,0">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Text="API Key:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="2" Text="PIN:" VerticalAlignment="Center" Margin="15,0,8,0"/>
-                        <TextBox Grid.Column="3" Text="{Binding Pin, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalContentAlignment="Center"/>
-
-                        <Button Grid.Column="5" Content="Save" Padding="15,5" Margin="0,0,5,0"
-                                Command="{Binding SaveApiKeyCommand}"/>
-                        <Button Grid.Column="6" Content="Test" Padding="15,5"
-                                Command="{Binding TestApiConnectionCommand}"/>
-                    </Grid>
-                    <TextBlock Margin="0,8,0,0" FontSize="10" Foreground="Gray">
-                        <Run Text="Metadata provided by "/><Hyperlink NavigateUri="https://thetvdb.com/" RequestNavigate="Hyperlink_RequestNavigate">TheTVDB</Hyperlink><Run Text=". Please consider "/><Hyperlink NavigateUri="https://thetvdb.com/subscribe" RequestNavigate="Hyperlink_RequestNavigate">subscribing</Hyperlink><Run Text="."/>
-                    </TextBlock>
-                </StackPanel>
+                <TextBlock Margin="0,6,0,0" FontSize="10" Foreground="Gray">
+                    <Run Text="Metadata provided by "/><Hyperlink NavigateUri="https://thetvdb.com/" RequestNavigate="Hyperlink_RequestNavigate">TheTVDB</Hyperlink><Run Text=". Please consider "/><Hyperlink NavigateUri="https://thetvdb.com/subscribe" RequestNavigate="Hyperlink_RequestNavigate">subscribing</Hyperlink><Run Text="."/>
+                </TextBlock>
             </StackPanel>
         </Border>
 

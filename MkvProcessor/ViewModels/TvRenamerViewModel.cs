@@ -70,22 +70,16 @@ public partial class TvRenamerViewModel : ObservableObject
 
     // === API Configuration ===
 
-    [ObservableProperty]
     private string _apiKey = string.Empty;
-
-    [ObservableProperty]
     private string _pin = string.Empty;
 
     [ObservableProperty]
     private bool _isApiConfigured;
 
-    [ObservableProperty]
-    private bool _isApiSettingsExpanded;
-
     // === Status ===
 
     [ObservableProperty]
-    private string _statusText = "Enter your TVDB API key to get started";
+    private string _statusText = "Ready";
 
     [ObservableProperty]
     private bool _isRenaming;
@@ -125,20 +119,27 @@ public partial class TvRenamerViewModel : ObservableObject
     {
         // Load settings
         _settings = _settingsService.Load();
-        ApiKey = _settings.TvdbApiKey ?? string.Empty;
-        Pin = _settings.TvdbPin ?? string.Empty;
         SelectedNamingFormat = _settings.EpisodeNamingFormat;
 
-        IsApiConfigured = !string.IsNullOrWhiteSpace(ApiKey);
-        IsApiSettingsExpanded = !IsApiConfigured;
+        // Read API key from configuration (appsettings.json / appsettings.user.json / env vars)
+        _apiKey = AppConfiguration.TvdbApiKey ?? string.Empty;
+        _pin = AppConfiguration.TvdbPin ?? string.Empty;
+
+        IsApiConfigured = !string.IsNullOrWhiteSpace(_apiKey);
 
         if (IsApiConfigured)
         {
-            _tvdbService.SetApiKey(ApiKey);
-            if (!string.IsNullOrWhiteSpace(Pin))
-                _tvdbService.SetPin(Pin);
+            _tvdbService.SetApiKey(_apiKey);
+            if (!string.IsNullOrWhiteSpace(_pin))
+                _tvdbService.SetPin(_pin);
             StatusText = "Ready";
         }
+        else
+        {
+            StatusText = "TVDB API key not configured. Add your key to appsettings.user.json";
+        }
+
+        TestApiConnectionCommand.NotifyCanExecuteChanged();
 
         // Load recent shows
         await LoadRecentShowsAsync();
@@ -149,8 +150,6 @@ public partial class TvRenamerViewModel : ObservableObject
     /// </summary>
     public void SaveSettings()
     {
-        _settings.TvdbApiKey = ApiKey;
-        _settings.TvdbPin = Pin;
         _settings.EpisodeNamingFormat = SelectedNamingFormat;
         _settingsService.Save(_settings);
     }
@@ -599,49 +598,25 @@ public partial class TvRenamerViewModel : ObservableObject
 
     #region API Commands
 
-    [RelayCommand]
-    private void SaveApiKey()
-    {
-        if (string.IsNullOrWhiteSpace(ApiKey))
-        {
-            StatusText = "Please enter an API key";
-            return;
-        }
-
-        _tvdbService.SetApiKey(ApiKey);
-        if (!string.IsNullOrWhiteSpace(Pin))
-            _tvdbService.SetPin(Pin);
-
-        IsApiConfigured = true;
-        IsApiSettingsExpanded = false;
-        SaveSettings();
-        StatusText = "API settings saved";
-    }
-
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanTestApiConnection))]
     private async Task TestApiConnection()
     {
-        if (string.IsNullOrWhiteSpace(ApiKey))
-        {
-            StatusText = "Please enter an API key";
-            return;
-        }
-
-        _tvdbService.SetApiKey(ApiKey);
-        if (!string.IsNullOrWhiteSpace(Pin))
-            _tvdbService.SetPin(Pin);
+        _tvdbService.SetApiKey(_apiKey);
+        if (!string.IsNullOrWhiteSpace(_pin))
+            _tvdbService.SetPin(_pin);
 
         var success = await _tvdbService.AuthenticateAsync();
         if (success)
         {
             IsApiConfigured = true;
-            SaveSettings();
         }
         else
         {
             IsApiConfigured = false;
         }
     }
+
+    private bool CanTestApiConnection() => !string.IsNullOrWhiteSpace(_apiKey);
 
     [RelayCommand]
     private void ClearCache()
@@ -711,11 +686,6 @@ public partial class TvRenamerViewModel : ObservableObject
     }
 
     partial void OnSearchQueryChanged(string value)
-    {
-        SearchShowsCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnApiKeyChanged(string value)
     {
         SearchShowsCommand.NotifyCanExecuteChanged();
     }
