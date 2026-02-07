@@ -240,6 +240,92 @@ public class ProcessingQueue
     }
 
     /// <summary>
+    /// Extracts subtitles from selected files without encoding
+    /// </summary>
+    public async Task ExtractSubtitlesAsync(ProcessingSettings settings)
+    {
+        if (IsProcessing)
+            return;
+
+        IsProcessing = true;
+        IsProcessingChanged?.Invoke(true);
+        IsPaused = false;
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        var summary = new ProcessingSummary();
+        var startTime = DateTime.Now;
+
+        try
+        {
+            LogOutput?.Invoke($"=== Starting Subtitle Extraction ===");
+
+            var filesToProcess = Files
+                .Where(f => f.IsSelected && f.Status == FileStatus.Pending)
+                .ToList();
+
+            LogOutput?.Invoke($"Files to extract subtitles from: {filesToProcess.Count}");
+            summary.TotalFiles = filesToProcess.Count;
+
+            if (filesToProcess.Count == 0)
+            {
+                LogOutput?.Invoke("No files to process! Check that files are selected and have Pending status.");
+            }
+
+            foreach (var file in filesToProcess)
+            {
+                while (IsPaused && !_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(100, _cancellationTokenSource.Token);
+                }
+
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                CurrentFile = file;
+                file.Status = FileStatus.Processing;
+                file.CurrentStep = "Extracting subtitles";
+                FileStarted?.Invoke(file);
+
+                try
+                {
+                    await _ffmpegService.ExtractSubtitlesOnlyAsync(
+                        file, settings.SubtitleLanguageFilter, _cancellationTokenSource.Token);
+
+                    file.Status = FileStatus.Complete;
+                    file.Progress = 100;
+                    summary.SuccessfulFiles++;
+                    FileCompleted?.Invoke(ProcessingResult.Successful(file, file.FilePath, 0, TimeSpan.Zero));
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    file.Status = FileStatus.Error;
+                    file.ErrorMessage = ex.Message;
+                    summary.FailedFiles++;
+                    FileCompleted?.Invoke(ProcessingResult.Failed(file, ex.Message, TimeSpan.Zero));
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            LogOutput?.Invoke("Subtitle extraction cancelled by user");
+        }
+        finally
+        {
+            summary.TotalTime = DateTime.Now - startTime;
+            CurrentFile = null;
+            IsProcessing = false;
+            IsProcessingChanged?.Invoke(false);
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+
+            ProcessingCompleted?.Invoke(summary);
+        }
+    }
+
+    /// <summary>
     /// Pauses processing
     /// </summary>
     public void Pause()

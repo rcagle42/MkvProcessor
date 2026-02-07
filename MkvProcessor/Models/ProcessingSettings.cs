@@ -25,6 +25,11 @@ public class ProcessingSettings
     /// </summary>
     public string? LastInputFolder { get; set; }
 
+    /// <summary>
+    /// Language filter for subtitle extraction (e.g., "eng", "spa", or "all" for all languages)
+    /// </summary>
+    public string SubtitleLanguageFilter { get; set; } = "eng";
+
     // === TV Renamer Settings ===
 
     /// <summary>

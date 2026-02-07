@@ -119,6 +119,12 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+
+                        <!-- Subtitle Language Filter -->
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Subtitles:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                        <ComboBox Grid.Row="1" Grid.Column="3" Margin="0,0,0,10"
+                                  ItemsSource="{Binding SubtitleLanguages}"
+                                  SelectedItem="{Binding Settings.SubtitleLanguageFilter}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -283,15 +289,20 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="1" Content="Start Processing" Padding="20,10" FontWeight="Bold"
+                <Button Grid.Column="1" Content="Extract Subtitles" Padding="15,10" Margin="0,0,10,0"
+                        Command="{Binding ExtractSubtitlesCommand}"
+                        Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+
+                <Button Grid.Column="2" Content="Start Processing" Padding="20,10" FontWeight="Bold"
                         Background="#0078D4" Foreground="White"
                         Command="{Binding StartProcessingCommand}"
                         Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
 
-                <Button Grid.Column="1" Content="Pause" Padding="20,10"
+                <Button Grid.Column="2" Content="Pause" Padding="20,10"
                         Command="{Binding PauseProcessingCommand}"
                         Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}">
                     <Button.Style>
@@ -305,15 +316,15 @@
                     </Button.Style>
                 </Button>
 
-                <Button Grid.Column="2" Content="Resume" Padding="20,10" Margin="10,0"
+                <Button Grid.Column="3" Content="Resume" Padding="20,10" Margin="10,0"
                         Command="{Binding ResumeProcessingCommand}"
                         Visibility="{Binding IsPaused, Converter={StaticResource BoolToVis}}"/>
 
-                <Button Grid.Column="3" Content="Cancel" Padding="20,10"
+                <Button Grid.Column="4" Content="Cancel" Padding="20,10"
                         Command="{Binding CancelProcessingCommand}"
                         Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}"/>
 
-                <TextBlock Grid.Column="4" Text="{Binding StatusText}"
+                <TextBlock Grid.Column="5" Text="{Binding StatusText}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"
                            Foreground="Gray"/>
             </Grid>

@@ -77,7 +77,7 @@ public partial class FFmpegService
             // Step 1: Extract subtitles
             StepChanged?.Invoke("Extracting subtitles...");
             file.CurrentStep = "Extracting subtitles";
-            await ExtractSubtitlesAsync(file.FilePath, outputFolder, cancellationToken);
+            await ExtractSubtitlesAsync(file.FilePath, outputFolder, settings.SubtitleLanguageFilter, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -136,7 +136,7 @@ public partial class FFmpegService
     /// Extracts subtitles from the MKV file (non-fatal - continues on error)
     /// Uses Plex-compatible naming: Movie.en.srt, Movie.es.sup, etc.
     /// </summary>
-    private async Task ExtractSubtitlesAsync(string inputPath, string outputFolder, CancellationToken cancellationToken)
+    private async Task ExtractSubtitlesAsync(string inputPath, string outputFolder, string? languageFilter, CancellationToken cancellationToken)
     {
         var fileName = Path.GetFileNameWithoutExtension(inputPath);
 
@@ -153,12 +153,23 @@ public partial class FFmpegService
 
             LogOutput?.Invoke($"  Found {subtitleStreams.Count} subtitle stream(s)");
 
+            // Filter by language if configured
+            var filteredStreams = subtitleStreams;
+            if (!string.IsNullOrWhiteSpace(languageFilter) &&
+                !languageFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                filteredStreams = subtitleStreams
+                    .Where(s => s.Language.Equals(languageFilter, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                LogOutput?.Invoke($"  Filtered to {filteredStreams.Count} '{languageFilter}' stream(s) out of {subtitleStreams.Count} total");
+            }
+
             // Track language usage to handle duplicates (e.g., Movie.en.srt, Movie.en.2.srt)
             var languageCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             // Separate text-based and bitmap-based subtitles
-            var textSubtitles = subtitleStreams.Where(s => IsTextSubtitle(s.CodecName)).ToList();
-            var bitmapSubtitles = subtitleStreams.Where(s => IsBitmapSubtitle(s.CodecName)).ToList();
+            var textSubtitles = filteredStreams.Where(s => IsTextSubtitle(s.CodecName)).ToList();
+            var bitmapSubtitles = filteredStreams.Where(s => IsBitmapSubtitle(s.CodecName)).ToList();
 
             // Extract text subtitles as SRT (one file per stream)
             foreach (var sub in textSubtitles)
@@ -212,6 +223,30 @@ public partial class FFmpegService
             // Subtitle extraction is non-fatal - just log and continue
             LogOutput?.Invoke($"  Warning: Subtitle extraction failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Extracts subtitles from a single file without encoding video
+    /// </summary>
+    public async Task ExtractSubtitlesOnlyAsync(
+        MkvFile file, string? languageFilter, CancellationToken cancellationToken)
+    {
+        var outputFolder = file.OutputFolder;
+        if (string.IsNullOrEmpty(outputFolder))
+        {
+            var inputFolder = Path.GetDirectoryName(file.FilePath) ?? "";
+            var parentFolderName = Path.GetFileName(inputFolder);
+            outputFolder = Path.Combine(inputFolder, parentFolderName);
+        }
+
+        Directory.CreateDirectory(outputFolder);
+
+        LogOutput?.Invoke($"Extracting subtitles: {file.FileName}");
+        StepChanged?.Invoke("Extracting subtitles...");
+
+        await ExtractSubtitlesAsync(file.FilePath, outputFolder, languageFilter, cancellationToken);
+
+        LogOutput?.Invoke($"Subtitle extraction complete: {file.FileName}");
     }
 
     /// <summary>

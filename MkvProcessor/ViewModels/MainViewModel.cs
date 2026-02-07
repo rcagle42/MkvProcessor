@@ -89,6 +89,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public AudioMode[] AudioModes => [AudioMode.Dual, AudioMode.Original, AudioMode.Normalized];
 
+    /// <summary>
+    /// Subtitle language options for the filter dropdown
+    /// </summary>
+    public string[] SubtitleLanguages => ["All", "eng", "spa", "fra", "deu", "ita", "por", "jpn", "kor", "chi", "rus", "ara", "nld", "pol"];
+
     public MainViewModel()
     {
         // Wire up events
@@ -283,6 +288,16 @@ public partial class MainViewModel : ObservableObject
 
     private bool CanStartProcessing() =>
         !IsProcessing && _processingQueue.GetSelectedPendingCount() > 0;
+
+    [RelayCommand(CanExecute = nameof(CanStartProcessing))]
+    private async Task ExtractSubtitles()
+    {
+        SaveSettings();
+        StatusText = "Extracting subtitles...";
+        LogLines.Clear();
+        LogText = string.Empty;
+        await _processingQueue.ExtractSubtitlesAsync(Settings);
+    }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
     private void PauseProcessing()
@@ -509,6 +524,7 @@ public partial class MainViewModel : ObservableObject
 
         // Notify command can execute changed
         StartProcessingCommand.NotifyCanExecuteChanged();
+        ExtractSubtitlesCommand.NotifyCanExecuteChanged();
     }
 
     private static string FormatFileSize(long bytes)
