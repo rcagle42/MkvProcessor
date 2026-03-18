@@ -172,6 +172,9 @@ public partial class PgsToSrtService
             return false;
         }
 
+        // Reduce priority so OCR doesn't starve the system
+        try { process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { }
+
         // Register cancellation callback
         using var registration = cancellationToken.Register(() =>
         {

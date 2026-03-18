@@ -447,6 +447,9 @@ public partial class FFmpegService
         if (process == null)
             throw new Exception("Failed to start FFmpeg process");
 
+        // Reduce priority so encoding doesn't starve the system
+        try { process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { }
+
         // Register cancellation callback to kill the process immediately
         using var registration = cancellationToken.Register(() =>
         {

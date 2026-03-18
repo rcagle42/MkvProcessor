@@ -130,7 +130,10 @@ public class EncoderDetectionService
 
     private static string[] GetCpuArguments(QualityPreset quality)
     {
-        return ["-c:v", "libx264", "-preset", quality.Preset, "-crf", quality.Crf.ToString()];
+        // Reserve cores for system responsiveness: use max(1, totalCores - 2)
+        var threadCount = Math.Max(1, Environment.ProcessorCount - 2);
+        return ["-c:v", "libx264", "-threads", threadCount.ToString(),
+                "-preset", quality.Preset, "-crf", quality.Crf.ToString()];
     }
 
     private static string[] GetNvencArguments(QualityPreset quality)
