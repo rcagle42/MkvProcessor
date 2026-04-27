@@ -3,6 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Vendored third-party tools — must not be tracked. SubtitleEdit binaries exceed
+# GitHub's 100 MB per-file limit; if reintroduced, install separately or migrate to LFS.
+MkvProcessor/subtitleedit/
+subtitleedit/
+
 # User-specific files
 *.rsuser
 *.suo

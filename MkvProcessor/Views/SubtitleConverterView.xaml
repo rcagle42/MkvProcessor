@@ -62,6 +62,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Settings Panel (Collapsible) -->
@@ -79,7 +80,7 @@
 
                     <ToggleButton Style="{StaticResource ExpanderToggleButton}"
                                   IsChecked="{Binding IsSettingsExpanded}"
-                                  Content="PgsToSrt Settings" FontWeight="SemiBold"/>
+                                  Content="Tool Settings" FontWeight="SemiBold"/>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,10,0">
                         <Ellipse Width="10" Height="10" Margin="0,0,5,0">
@@ -137,7 +138,7 @@
 
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
@@ -149,10 +150,49 @@
                                 Command="{Binding BrowseTessdataPathCommand}"/>
                     </Grid>
 
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="mkvextract.exe:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding MkvExtractPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center" Margin="0,0,5,0"/>
+                        <Button Grid.Column="2" Content="Browse" Padding="10,5"
+                                Command="{Binding BrowseMkvExtractPathCommand}"/>
+                        <Ellipse Grid.Column="3" Width="10" Height="10" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="Gray"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMkvExtractAvailable}" Value="True">
+                                            <Setter Property="Fill" Value="Green"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Min score:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Width="80"
+                                 Text="{Binding SubtitleMinAcceptableScore, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"/>
+                    </Grid>
+
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Save Settings" Padding="10,5"
                                 Command="{Binding SaveSettingsCommandCommand}"/>
-                        <TextBlock Text="Tessdata contains .traineddata files for OCR languages"
+                        <TextBlock Text="PgsToSrt handles PGS OCR; mkvextract handles reliable track extraction."
                                    Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="15,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
@@ -239,8 +279,66 @@
             </DataGrid.RowStyle>
         </DataGrid>
 
-        <!-- Log Output -->
+        <!-- Advanced / Compare Panel (Collapsible) -->
         <Border Grid.Row="3" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
+                Padding="10" Margin="0,10,0,0">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ToggleButton Style="{StaticResource ExpanderToggleButton}"
+                                  IsChecked="{Binding IsAdvancedExpanded}"
+                                  Content="Advanced / Compare" FontWeight="SemiBold"/>
+
+                    <CheckBox Grid.Column="2" Content="Compare mode"
+                              IsChecked="{Binding CompareMode}"
+                              VerticalAlignment="Center"
+                              ToolTip="Run every applicable strategy and leave all candidates on disk so you can override the auto-selected winner."/>
+                </Grid>
+
+                <StackPanel Visibility="{Binding IsAdvancedExpanded, Converter={StaticResource BoolToVis}}"
+                            Margin="0,10,0,0">
+                    <TextBlock Text="Candidates for the selected file (select one and click Use Selected to override the winner):"
+                               Foreground="Gray" FontSize="11" Margin="0,0,0,5"/>
+
+                    <ListBox ItemsSource="{Binding CurrentCandidates}"
+                             SelectedItem="{Binding SelectedCandidate}"
+                             MaxHeight="140">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding StrategyName}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Score, StringFormat='Score: {0}'}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding CueCount, StringFormat='{}{0} cues'}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding FilePath}"
+                                               TextTrimming="CharacterEllipsis" Foreground="Gray" FontSize="11"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Use Selected" Padding="10,5" Margin="0,0,8,0"
+                                Command="{Binding UseSelectedCandidateCommand}"/>
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray" FontSize="11"
+                                   Text="In Compare mode, losing candidates are kept on disk with strategy-suffixed names until you pick one."/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Log Output -->
+        <Border Grid.Row="4" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="3"
                 Margin="0,10,0,0" MaxHeight="120">
             <Grid>
                 <Grid.RowDefinitions>
@@ -263,7 +361,7 @@
         </Border>
 
         <!-- Bottom Bar -->
-        <Grid Grid.Row="4" Margin="0,10,0,0">
+        <Grid Grid.Row="5" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

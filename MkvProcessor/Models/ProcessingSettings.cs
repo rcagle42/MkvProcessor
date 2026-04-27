@@ -74,6 +74,31 @@ public class ProcessingSettings
     /// </summary>
     public string? LastSubtitleFolder { get; set; }
 
+    // === Subtitle Orchestrator Settings ===
+
+    /// <summary>
+    /// Path to mkvextract.exe (null = auto-detect in bundled /mkvtoolnix/ folder or PATH)
+    /// </summary>
+    public string? MkvExtractPath { get; set; }
+
+    /// <summary>
+    /// Minimum orchestrator score (0-100) for a candidate to be accepted without running
+    /// further strategies. Lower = faster, higher = more thorough.
+    /// </summary>
+    public int SubtitleMinAcceptableScore { get; set; } = 60;
+
+    /// <summary>
+    /// When true, the Processing pipeline routes subtitle extraction through the orchestrator.
+    /// When false, falls back to the legacy FFmpeg-direct extraction path.
+    /// </summary>
+    public bool EnableOrchestratorInProcessing { get; set; } = true;
+
+    /// <summary>
+    /// When true, the Subtitle Converter tab runs every applicable strategy and shows results
+    /// side-by-side in the Advanced/Compare panel instead of short-circuiting on the first hit.
+    /// </summary>
+    public bool SubtitleCompareMode { get; set; } = false;
+
     /// <summary>
     /// Gets the current quality preset based on index
     /// </summary>

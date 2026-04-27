@@ -288,7 +288,7 @@ public class ProcessingQueue
                 try
                 {
                     await _ffmpegService.ExtractSubtitlesOnlyAsync(
-                        file, settings.SubtitleLanguageFilter, _cancellationTokenSource.Token);
+                        file, settings, _cancellationTokenSource.Token);
 
                     file.Status = FileStatus.Complete;
                     file.Progress = 100;

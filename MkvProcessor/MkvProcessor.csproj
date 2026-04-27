@@ -19,11 +19,36 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- libse's public API exposes System.Drawing.Bitmap; .NET 8 requires this package. -->
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <!-- Required by TesseractOCR.Engine constructor signature (takes an ILogger parameter). -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <!--
+    Embedded VobSub OCR dependencies. These DLLs are already bundled inside the pgstosrt
+    folder for PgsToSrt's own use; we reference them in place and rely on the AssemblyResolve
+    hook in App.xaml.cs to load them at runtime. Private=false prevents duplicate copies in
+    the output directory (pgstosrt/** is already copied via the None Include below).
+  -->
+  <ItemGroup>
+    <Reference Include="libse">
+      <HintPath>pgstosrt\libse.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TesseractOCR">
+      <HintPath>pgstosrt\TesseractOCR.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <None Include="ffmpeg\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="pgstosrt\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="mkvtoolnix\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Subtitle Edit's OCR fix replace lists — used by VobSubEmbeddedOcrStrategy to clean
+         up common OCR mistakes after recognition. See dictionaries/README.md. -->
+    <None Include="dictionaries\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

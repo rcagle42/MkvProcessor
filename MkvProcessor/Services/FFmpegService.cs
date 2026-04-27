@@ -2,6 +2,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using MkvProcessor.Models;
+using MkvProcessor.Models.Subtitle;
+using MkvProcessor.Services.Subtitle;
+using MkvProcessor.Services.Subtitle.Strategies;
 
 namespace MkvProcessor.Services;
 
@@ -11,6 +14,31 @@ namespace MkvProcessor.Services;
 public partial class FFmpegService
 {
     private readonly MediaInfoService _mediaInfoService = new();
+    private readonly MkvExtractService _mkvExtractService = new();
+    private readonly PgsToSrtService _pgsToSrtServiceForOrchestrator = new();
+    private SubtitleOrchestrator? _orchestrator;
+
+    /// <summary>
+    /// Lazily constructs the subtitle orchestrator. All strategies run in-process or via
+    /// headless child processes — no external GUI applications are launched. Text tracks
+    /// go through mkvextract/FFmpeg, PGS bitmap tracks go through PgsToSrt (headless), and
+    /// anything else falls back to raw bitmap extraction for external OCR.
+    /// </summary>
+    private SubtitleOrchestrator GetOrchestrator()
+    {
+        if (_orchestrator is not null)
+            return _orchestrator;
+
+        var strategies = new List<ISubtitleExtractionStrategy>
+        {
+            new TextPassthroughStrategy(_mkvExtractService),
+            new PgsToSrtStrategy(_pgsToSrtServiceForOrchestrator, _mkvExtractService),
+            new VobSubEmbeddedOcrStrategy(_mkvExtractService),
+        };
+        _orchestrator = new SubtitleOrchestrator(strategies);
+        _orchestrator.LogOutput += line => LogOutput?.Invoke("  " + line);
+        return _orchestrator;
+    }
 
     /// <summary>
     /// Raised when FFmpeg outputs a log line
@@ -77,7 +105,15 @@ public partial class FFmpegService
             // Step 1: Extract subtitles
             StepChanged?.Invoke("Extracting subtitles...");
             file.CurrentStep = "Extracting subtitles";
-            await ExtractSubtitlesAsync(file.FilePath, outputFolder, settings.SubtitleLanguageFilter, cancellationToken);
+            if (settings.EnableOrchestratorInProcessing)
+            {
+                await ExtractSubtitlesOrchestratedAsync(
+                    file.FilePath, outputFolder, file.Duration, settings, cancellationToken);
+            }
+            else
+            {
+                await ExtractSubtitlesAsync(file.FilePath, outputFolder, settings.SubtitleLanguageFilter, cancellationToken);
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -226,10 +262,11 @@ public partial class FFmpegService
     }
 
     /// <summary>
-    /// Extracts subtitles from a single file without encoding video
+    /// Extracts subtitles from a single file without encoding video. Uses the orchestrator
+    /// when <see cref="ProcessingSettings.EnableOrchestratorInProcessing"/> is true.
     /// </summary>
     public async Task ExtractSubtitlesOnlyAsync(
-        MkvFile file, string? languageFilter, CancellationToken cancellationToken)
+        MkvFile file, ProcessingSettings settings, CancellationToken cancellationToken)
     {
         var outputFolder = file.OutputFolder;
         if (string.IsNullOrEmpty(outputFolder))
@@ -244,9 +281,241 @@ public partial class FFmpegService
         LogOutput?.Invoke($"Extracting subtitles: {file.FileName}");
         StepChanged?.Invoke("Extracting subtitles...");
 
-        await ExtractSubtitlesAsync(file.FilePath, outputFolder, languageFilter, cancellationToken);
+        if (settings.EnableOrchestratorInProcessing)
+        {
+            await ExtractSubtitlesOrchestratedAsync(
+                file.FilePath, outputFolder, file.Duration, settings, cancellationToken);
+        }
+        else
+        {
+            await ExtractSubtitlesAsync(file.FilePath, outputFolder, settings.SubtitleLanguageFilter, cancellationToken);
+        }
 
         LogOutput?.Invoke($"Subtitle extraction complete: {file.FileName}");
+    }
+
+    /// <summary>
+    /// Orchestrator-driven subtitle extraction. For each subtitle stream, runs the strategy
+    /// chain, validates and scores candidates, promotes the winner to the Plex-compatible
+    /// final filename, and cleans up losing candidates. Bitmap codecs with no matching
+    /// strategy fall back to the legacy raw-copy extraction so behavior is never worse than
+    /// the pre-orchestrator pipeline.
+    /// </summary>
+    private async Task ExtractSubtitlesOrchestratedAsync(
+        string inputPath,
+        string outputFolder,
+        TimeSpan videoDuration,
+        ProcessingSettings settings,
+        CancellationToken cancellationToken)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+        // Propagate user-configured tool paths before the locators are consulted.
+        MkvExtractLocator.SetUserPath(settings.MkvExtractPath);
+        PgsToSrtLocator.SetUserPath(settings.PgsToSrtPath);
+
+        List<SubtitleStreamInfo> streams;
+        try
+        {
+            streams = await _mediaInfoService.GetSubtitleStreamsAsync(inputPath);
+        }
+        catch (Exception ex)
+        {
+            LogOutput?.Invoke($"  Warning: Failed to probe subtitle streams: {ex.Message}");
+            return;
+        }
+
+        if (streams.Count == 0)
+        {
+            LogOutput?.Invoke("  No subtitle streams found");
+            return;
+        }
+
+        LogOutput?.Invoke($"  Found {streams.Count} subtitle stream(s)");
+
+        // Language filter mirrors the legacy behaviour.
+        var filtered = streams;
+        if (!string.IsNullOrWhiteSpace(settings.SubtitleLanguageFilter) &&
+            !settings.SubtitleLanguageFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = streams
+                .Where(s => s.Language.Equals(settings.SubtitleLanguageFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            LogOutput?.Invoke($"  Filtered to {filtered.Count} '{settings.SubtitleLanguageFilter}' stream(s)");
+        }
+
+        if (filtered.Count == 0)
+            return;
+
+        var orchestrator = GetOrchestrator();
+        var languageCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var stream in filtered)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var descriptor = SubtitleSourceDescriptor.FromStream(inputPath, stream);
+            var langSuffix = GetLanguageSuffix(stream.Language, languageCount);
+            var baseName = $"{fileName}.{langSuffix}";
+
+            var context = new SubtitleScoringContext(
+                ExpectedLanguage: stream.Language,
+                VideoDuration: videoDuration > TimeSpan.Zero ? videoDuration : null,
+                SourceClass: descriptor.CodecClass);
+
+            var ocrLanguage = !string.IsNullOrWhiteSpace(stream.Language) && stream.Language != "und"
+                ? stream.Language
+                : settings.DefaultSubtitleLanguage;
+
+            SubtitleOrchestrationResult result;
+            try
+            {
+                result = await orchestrator.ExtractAsync(
+                    descriptor,
+                    outputFolder,
+                    baseName,
+                    ocrLanguage,
+                    settings.TessdataPath,
+                    context,
+                    settings.SubtitleMinAcceptableScore,
+                    thoroughMode: false,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogOutput?.Invoke($"  Orchestrator threw on {stream.Language} track: {ex.Message}");
+                continue;
+            }
+
+            if (result.HasWinner)
+            {
+                PromoteWinnerAndCleanup(result, outputFolder, baseName);
+                LogOutput?.Invoke(
+                    $"  ✓ {stream.Language} ({stream.CodecName}) via {result.Winner!.StrategyName} — score {result.Winner.Score}");
+                continue;
+            }
+
+            // Fallback: no strategy handled this source. For bitmap codecs we still want to
+            // hand the user the raw track so they can OCR it externally.
+            if (descriptor.CodecClass is SubtitleCodecClass.PgsBitmap
+                                      or SubtitleCodecClass.VobSubBitmap
+                                      or SubtitleCodecClass.DvbBitmap)
+            {
+                LogOutput?.Invoke(
+                    $"  No strategy matched {stream.CodecName}; extracting raw bitmap as fallback");
+                await ExtractRawBitmapFallbackAsync(
+                    inputPath, outputFolder, baseName, stream, cancellationToken);
+            }
+            else
+            {
+                LogOutput?.Invoke($"  ✗ No viable subtitle for {stream.Language} ({stream.CodecName})");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves the winning candidate file to the Plex-compatible final name
+    /// (<c>{baseName}.srt</c>) and deletes any losing viable candidates.
+    /// </summary>
+    private static void PromoteWinnerAndCleanup(
+        SubtitleOrchestrationResult result, string outputFolder, string baseName)
+    {
+        if (result.Winner is null || string.IsNullOrEmpty(result.Winner.FilePath))
+            return;
+
+        var finalPath = Path.Combine(outputFolder, $"{baseName}.srt");
+
+        if (!string.Equals(result.Winner.FilePath, finalPath, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (File.Exists(finalPath))
+                    File.Delete(finalPath);
+                File.Move(result.Winner.FilePath, finalPath);
+            }
+            catch
+            {
+                // If rename fails the file still exists with the strategy suffix — leave it.
+            }
+        }
+
+        foreach (var candidate in result.AllCandidates)
+        {
+            if (!candidate.IsViable) continue;
+            if (string.Equals(candidate.FilePath, finalPath, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(candidate.FilePath, result.Winner.FilePath, StringComparison.OrdinalIgnoreCase)) continue;
+
+            try { if (File.Exists(candidate.FilePath)) File.Delete(candidate.FilePath); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Last-resort bitmap extraction when no orchestrator strategy produced a viable SRT.
+    /// Prefers mkvextract (handles VobSub's .idx+.sub pair correctly); falls back to ffmpeg
+    /// with format-specific flags. For VobSub, outputs to <c>.idx</c> so ffmpeg picks its
+    /// vobsub muxer — writing to <c>.sub</c> directly makes ffmpeg pick the microdvd muxer,
+    /// which rejects the codec and produces an empty file.
+    /// </summary>
+    private async Task ExtractRawBitmapFallbackAsync(
+        string inputPath,
+        string outputFolder,
+        string baseName,
+        SubtitleStreamInfo stream,
+        CancellationToken cancellationToken)
+    {
+        var codec = stream.CodecName.ToLowerInvariant();
+        var isVobSub = codec.Contains("dvd_subtitle") || codec.Contains("dvdsub") || codec.Contains("vobsub");
+        var isPgs = stream.IsPgs || codec.Contains("pgs") || codec.Contains("hdmv");
+
+        // Choose the target file: .sup for PGS, .idx for VobSub (ffmpeg writes .idx + .sub pair),
+        // .sub for anything else (DVB). mkvextract respects whatever extension we give it.
+        string targetPath;
+        if (isPgs)
+            targetPath = Path.Combine(outputFolder, $"{baseName}.sup");
+        else if (isVobSub)
+            targetPath = Path.Combine(outputFolder, $"{baseName}.idx");
+        else
+            targetPath = Path.Combine(outputFolder, $"{baseName}.sub");
+
+        // Prefer mkvextract when available — it handles every MKV subtitle codec correctly,
+        // including VobSub's paired output, without the ffmpeg muxer quirks.
+        if (_mkvExtractService.IsAvailable)
+        {
+            LogOutput?.Invoke($"  [mkvextract] extracting track {stream.Index} → {Path.GetFileName(targetPath)}");
+            var result = await _mkvExtractService.ExtractTrackAsync(
+                inputPath, stream.Index, targetPath, cancellationToken);
+
+            if (result.Success && File.Exists(targetPath) && new FileInfo(targetPath).Length > 0)
+            {
+                LogOutput?.Invoke($"  Extracted raw {Path.GetExtension(targetPath).TrimStart('.').ToUpper()} for {stream.Language}");
+                return;
+            }
+
+            LogOutput?.Invoke($"  mkvextract failed: {result.ErrorMessage}. Falling back to FFmpeg.");
+        }
+
+        // FFmpeg fallback. The target extension drives the muxer selection; the arguments
+        // below work for .sup (pgs muxer) and .idx (vobsub muxer) but not .sub (microdvd).
+        try
+        {
+            var args = $"-hide_banner -loglevel error -y -i \"{inputPath}\" -map 0:{stream.Index} -c:s copy \"{targetPath}\"";
+            await RunFFmpegAsync(args, null, cancellationToken, suppressProgress: true, ignoreExitCode: true);
+
+            if (File.Exists(targetPath) && new FileInfo(targetPath).Length > 0)
+                LogOutput?.Invoke($"  Extracted raw {Path.GetExtension(targetPath).TrimStart('.').ToUpper()} for {stream.Language}");
+            else
+                LogOutput?.Invoke(
+                    $"  Raw bitmap extraction produced no output for {stream.Language}. " +
+                    $"Install MKVToolNix (mkvextract) for reliable {stream.CodecName} extraction.");
+        }
+        catch (Exception ex)
+        {
+            LogOutput?.Invoke($"  Raw bitmap fallback failed: {ex.Message}");
+        }
     }
 
     /// <summary>
